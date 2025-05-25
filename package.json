@@ -1,0 +1,23 @@
+{
+    "name": "ivino-app-back",
+    "version": "1.0.0",
+    "description": "Servidor do aplicativo iVino",
+    "main": "app.js",
+    "type": "module",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "node app.js",
+        "dev": "nodemon app.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "express": "^5.1.0",
+        "firebase": "^11.8.1",
+        "firebase-admin": "^13.4.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.10"
+    }
+}
