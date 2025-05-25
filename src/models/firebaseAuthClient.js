@@ -2,13 +2,13 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDtYR9RCS8kiUp1pUOWMuxHKGBF701Yriw",
-    authDomain: "ivino-app.firebaseapp.com",
-    projectId: "ivino-app",
-    storageBucket: "ivino-app.firebasestorage.app",
-    messagingSenderId: "27430021409",
-    appId: "1:27430021409:web:5dd494dff3faa3cce87660",
-    measurementId: "G-14N8SXXVMC",
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.FIREBASE_APP_ID,
+    measurementId: process.env.FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
