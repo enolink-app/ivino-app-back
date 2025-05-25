@@ -1,2 +1,3 @@
-# ovino-app-back
-Servidor do aplicativo iVino
+# ivino-app-back
+
+Backend do aplicativo iVino
