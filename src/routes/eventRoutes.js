@@ -1,7 +1,9 @@
 import { Router } from "express";
 const router = Router();
-import { createEvent } from "../controllers/eventController.js";
+import verificarToken from "../middlewares/auth.js";
+import { createEvent, listEvents } from "../controllers/eventController.js";
 
-router.post("/events", createEvent);
-
+router.post("/events", verificarToken, createEvent);
+router.get("/events", verificarToken, listEvents);
+router.put("/events", verificarToken);
 export default router;

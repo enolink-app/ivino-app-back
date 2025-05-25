@@ -38,3 +38,32 @@ export const listUsers = async (req, res) => {
         res.status(500).json({ erro: "Erro ao buscar usuários", detalhes: error.message });
     }
 };
+
+export const editUser = async (req, res) => {
+    const uidToken = req.user.uid;
+    console.log(req.user, "USER");
+    const { name, language, type, image, email } = req.body;
+
+    try {
+        const userRef = db.collection("users").doc(uidToken);
+        const doc = await userRef.get();
+
+        if (!doc.exists) {
+            return res.status(404).json({ erro: "Usuário não encontrado" });
+        }
+
+        const updates = {};
+        if (name) updates.name = name;
+        if (email) updates.email = email;
+        if (language) updates.language = language;
+        if (type) updates.type = type;
+        if (image) updates.image = image;
+        updates.updatedAt = new Date();
+
+        await userRef.update(updates);
+
+        res.status(200).json({ mensagem: "Usuário atualizado com sucesso", updates });
+    } catch (error) {
+        res.status(500).json({ erro: "Erro ao atualizar usuário", detalhes: error.message });
+    }
+};

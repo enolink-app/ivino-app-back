@@ -18,7 +18,8 @@ export async function register(req, res) {
             type,
             language,
             dateBirth,
-            criadoEm: new Date(),
+            createdAt: new Date(),
+            updatedAt: null,
         });
 
         res.status(201).json({ uid: userRecord.uid });
@@ -37,3 +38,17 @@ export async function login(req, res) {
         res.status(401).json({ erro: "Token inválido", detalhes: error.message });
     }
 }
+
+export const sendPasswordRecover = async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) return res.status(400).json({ erro: "E-mail é obrigatório" });
+
+    try {
+        const link = await auth().generatePasswordResetLink(email);
+        // Você pode enviar o link por e-mail customizado ou deixar o Firebase cuidar
+        res.status(200).json({ mensagem: "Link de redefinição enviado", link });
+    } catch (error) {
+        res.status(500).json({ erro: "Erro ao enviar link", detalhes: error.message });
+    }
+};
