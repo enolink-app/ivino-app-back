@@ -1,7 +1,7 @@
 import db from "../models/firebase.js";
 
 export const createUser = async (req, res) => {
-    const { name, email, type } = req.body;
+    const { name, email, type, subscriptionPlan } = req.body;
 
     if (!name || !email || !type) {
         return res.status(400).json({ erro: "Campos obrigatórios ausentes" });
@@ -13,6 +13,12 @@ export const createUser = async (req, res) => {
             email,
             type,
             language: "pt",
+            subscriptionPlan: {
+                type: subscriptionPlan.type,
+                status: subscriptionPlan.status,
+                startedAt: subscriptionPlan.startedAt,
+                expiresAt: null,
+            },
             createdAt: new Date(),
         };
 

@@ -2,7 +2,7 @@ import pkg from "firebase-admin";
 const { auth, firestore } = pkg;
 
 export async function register(req, res) {
-    const { name, email, password, type, language, dateBirth } = req.body;
+    const { name, email, password, type, language, dateBirth, subscriptionPlan } = req.body;
 
     try {
         const userRecord = await auth().createUser({
@@ -11,16 +11,25 @@ export async function register(req, res) {
             displayName: name,
         });
 
-        await firestore().collection("users").doc(userRecord.uid).set({
-            name,
-            email,
-            password,
-            type,
-            language,
-            dateBirth,
-            createdAt: new Date(),
-            updatedAt: null,
-        });
+        await firestore()
+            .collection("users")
+            .doc(userRecord.uid)
+            .set({
+                name,
+                email,
+                password,
+                type,
+                language,
+                dateBirth,
+                subscriptionPlan: {
+                    type: subscriptionPlan.type,
+                    status: subscriptionPlan.status,
+                    startedAt: subscriptionPlan.startedAt,
+                    expiresAt: null,
+                },
+                createdAt: new Date(),
+                updatedAt: null,
+            });
 
         res.status(201).json({ uid: userRecord.uid });
     } catch (error) {

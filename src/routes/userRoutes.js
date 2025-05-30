@@ -1,10 +1,10 @@
 import { Router } from "express";
-import verificarToken from "../middlewares/auth.js";
+import verifiToken from "../middlewares/auth.js";
 import { createUser, listUsers, editUser } from "../controllers/userController.js";
 const router = Router();
 
-router.post("/users", verificarToken, createUser);
-router.get("/users", verificarToken, listUsers);
-router.put("/users/me", verificarToken, editUser);
+router.post("/users", verifiToken, createUser);
+router.get("/users", verifiToken, listUsers);
+router.put("/users/me", verifiToken, editUser);
 
 export default router;

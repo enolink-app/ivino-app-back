@@ -1,7 +1,7 @@
 import pkg from "firebase-admin";
 const { auth } = pkg;
 
-const verificarToken = async (req, res, next) => {
+const verifiToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -19,4 +19,4 @@ const verificarToken = async (req, res, next) => {
     }
 };
 
-export default verificarToken;
+export default verifiToken;

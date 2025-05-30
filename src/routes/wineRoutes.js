@@ -1,10 +1,10 @@
 import { Router } from "express";
 const router = Router();
-import verificarToken from "../middlewares/auth.js";
+import verifiToken from "../middlewares/auth.js";
 import { createWine, getUserWines, updateWine } from "../controllers/wineController.js";
 
-router.post("/wines", verificarToken, createWine);
-router.get("/wines", verificarToken, getUserWines);
-router.put("/wines/:id", verificarToken, updateWine);
+router.post("/wines", verifiToken, createWine);
+router.get("/wines", verifiToken, getUserWines);
+router.put("/wines/:id", verifiToken, updateWine);
 
 export default router;

@@ -1,1 +1,1 @@
-import verificarToken from "../middlewares/auth.js";
+import verifiToken from "../middlewares/auth.js";
