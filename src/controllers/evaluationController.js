@@ -1,25 +1,44 @@
-import db from "../models/firebase.js";
+import { collection } from "../models/firebase";
 
 export async function createEvaluation(req, res) {
-    const { eventId, wineId, userId, evaluation, comment } = req.body;
+    const uid = req.user.uid;
+    const { eventId, wineId, notes, comment } = req.body;
 
-    if (!eventId || !wineId || !userId || !evaluation) {
-        return res.status(400).json({ erro: "Campos obrigatórios ausentes" });
+    if (!eventId || !wineId || !notes || !notes.visual || !notes.flavour || !notes.taste || !notes.general) {
+        return res.status(400).json({ error: "Missing required fields or incomplete notes" });
     }
 
     try {
-        const newEvaluation = {
+        const evaluation = {
+            userId: uid,
             eventId,
             wineId,
-            userId,
-            evaluation, // { visual: 1-5, aroma: 1-5, paladar: 1-5, geral: 1-5 } LEMBRAR QUE ADD
+            notes,
             comment: comment || "",
             createdAt: new Date(),
         };
 
-        const docRef = await db.collection("evaluations").add(newEvaluation);
-        res.status(201).json({ id: docRef.id, ...newEvaluation });
+        const ref = await collection("evaluations").add(evaluation);
+        res.status(201).json({ id: ref.id, ...evaluation });
     } catch (error) {
-        res.status(500).json({ erro: "Erro ao criar avaliação", detalhes: error.message });
+        res.status(500).json({ error: "Error saving evaluation", details: error.message });
+    }
+}
+
+export async function getMyEvaluationsByEvent(req, res) {
+    const uid = req.user.uid;
+    const eventId = req.params.eventId;
+
+    try {
+        const snapshot = await collection("evaluations").where("userId", "==", uid).where("eventId", "==", eventId).get();
+
+        const evaluations = [];
+        snapshot.forEach((doc) => {
+            evaluations.push({ id: doc.id, ...doc.data() });
+        });
+
+        res.status(200).json(evaluations);
+    } catch (error) {
+        res.status(500).json({ error: "Error fetching evaluations", details: error.message });
     }
 }
