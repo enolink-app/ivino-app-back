@@ -1,4 +1,4 @@
-import { collection } from "../models/firebase";
+import db from "../models/firebase.js";
 
 export async function createDiaryEntry(req, res) {
     const uid = req.user.uid;
@@ -17,7 +17,7 @@ export async function createDiaryEntry(req, res) {
             createdAt: new Date(),
         };
 
-        const ref = await collection("users").doc(uid).collection("diaryEntries").add(entry);
+        const ref = await db.collection("users").doc(uid).collection("diaryEntries").add(entry);
 
         res.status(201).json({ id: ref.id, ...entry });
     } catch (error) {
@@ -29,7 +29,7 @@ export async function getDiaryEntries(req, res) {
     const uid = req.user.uid;
 
     try {
-        const snapshot = await collection("users").doc(uid).collection("diaryEntries").orderBy("createdAt", "desc").get();
+        const snapshot = await db.collection("users").doc(uid).collection("diaryEntries").orderBy("createdAt", "desc").get();
 
         const entries = [];
         snapshot.forEach((doc) => {
