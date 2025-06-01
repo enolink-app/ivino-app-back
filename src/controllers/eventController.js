@@ -1,7 +1,7 @@
 import db from "../models/firebase.js";
 
 export async function createEvent(req, res) {
-    const { name, organizerId, dateStart, dateEnd, wines, participants, status, updatedAt } = req.body;
+    const { name, organizerId, dateStart, dateEnd, wines, participants, status } = req.body;
 
     if (!name || !organizerId || !dateStart || !wines) {
         return res.status(400).json({ erro: "Campos obrigatórios ausentes" });
@@ -17,7 +17,7 @@ export async function createEvent(req, res) {
             participants: participants || [],
             status,
             createdAt: new Date(),
-            updatedAt,
+            updatedAt: new Date(),
         };
 
         const docRef = await db.collection("events").add(novoEvento);
@@ -64,7 +64,7 @@ export const editEvent = async (req, res) => {
         if (participants) updates.participants = participants;
         if (status) updates.status = status;
 
-        updates.updatedAt = updatedAt;
+        updates.updatedAt = new Date();
 
         await userRef.update(updates);
 

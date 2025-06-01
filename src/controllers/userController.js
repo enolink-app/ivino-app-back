@@ -46,9 +46,9 @@ export const listUsers = async (req, res) => {
 };
 
 export const editUser = async (req, res) => {
-    const uidToken = req.user.uid;
     console.log(req.user, "USER");
-    const { name, language, type, image, email } = req.body;
+    const uidToken = req.user.uid;
+    const { name, language, type, image } = req.body;
 
     try {
         const userRef = db.collection("users").doc(uidToken);
@@ -60,7 +60,6 @@ export const editUser = async (req, res) => {
 
         const updates = {};
         if (name) updates.name = name;
-        if (email) updates.email = email;
         if (language) updates.language = language;
         if (type) updates.type = type;
         if (image) updates.image = image;
