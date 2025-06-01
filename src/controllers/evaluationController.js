@@ -1,4 +1,4 @@
-import { collection } from "../models/firebase";
+import db from "../models/firebase.js";
 
 export async function createEvaluation(req, res) {
     const uid = req.user.uid;
@@ -18,7 +18,7 @@ export async function createEvaluation(req, res) {
             createdAt: new Date(),
         };
 
-        const ref = await collection("evaluations").add(evaluation);
+        const ref = await db.collection("evaluations").add(evaluation);
         res.status(201).json({ id: ref.id, ...evaluation });
     } catch (error) {
         res.status(500).json({ error: "Error saving evaluation", details: error.message });
@@ -30,7 +30,7 @@ export async function getMyEvaluationsByEvent(req, res) {
     const eventId = req.params.eventId;
 
     try {
-        const snapshot = await collection("evaluations").where("userId", "==", uid).where("eventId", "==", eventId).get();
+        const snapshot = await db.collection("evaluations").where("userId", "==", uid).where("eventId", "==", eventId).get();
 
         const evaluations = [];
         snapshot.forEach((doc) => {
