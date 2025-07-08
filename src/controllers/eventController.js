@@ -42,6 +42,72 @@ export const listEvents = async (req, res) => {
     }
 };
 
+export const getEventById = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const eventDoc = await db.collection("events").doc(id).get();
+
+        if (!eventDoc.exists) {
+            return res.status(404).json({ error: "Evento não encontrado" });
+        }
+
+        return res.status(200).json({ id: eventDoc.id, ...eventDoc.data() });
+    } catch (error) {
+        console.error("Erro ao buscar evento por ID:", error);
+        return res.status(500).json({ error: "Erro interno do servidor" });
+    }
+};
+
+export const evaluateWine = async (req, res) => {
+    const { id: eventId } = req.params;
+    const { wineIndex, userId, aroma, sabor, cor, notes } = req.body;
+
+    try {
+        const eventRef = db.collection("events").doc(eventId);
+        const eventDoc = await eventRef.get();
+
+        if (!eventDoc.exists) {
+            return res.status(404).json({ error: "Evento não encontrado" });
+        }
+
+        const eventData = eventDoc.data();
+        const wines = eventData.wines || [];
+
+        if (!wines[wineIndex]) {
+            return res.status(400).json({ error: "Vinho não encontrado no evento" });
+        }
+
+        // Inicializa array de avaliações se não existir
+        if (!wines[wineIndex].evaluations) {
+            wines[wineIndex].evaluations = [];
+        }
+
+        // Impede que o mesmo usuário avalie duas vezes
+        const alreadyEvaluated = wines[wineIndex].evaluations.some((ev) => ev.userId === userId);
+        if (alreadyEvaluated) {
+            return res.status(400).json({ error: "Você já avaliou esse vinho" });
+        }
+
+        wines[wineIndex].evaluations.push({
+            userId,
+            aroma,
+            sabor,
+            cor,
+            notes,
+            createdAt: new Date().toISOString(),
+        });
+
+        // Atualiza o evento com as novas avaliações
+        await eventRef.update({ wines });
+
+        return res.status(200).json({ message: "Avaliação registrada com sucesso", wines });
+    } catch (error) {
+        console.error("Erro ao avaliar vinho:", error);
+        return res.status(500).json({ error: "Erro ao registrar avaliação" });
+    }
+};
+
 export const editEvent = async (req, res) => {
     const uidToken = req.user.uid;
 
