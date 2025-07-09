@@ -76,3 +76,27 @@ export async function updateWine(req, res) {
         res.status(500).json({ error: "Error updating wine", details: error.message });
     }
 }
+
+export async function getWineById(req, res) {
+    const { id } = req.params;
+    const userId = req.user.uid;
+
+    try {
+        const doc = await db.collection("wines").doc(id).get();
+
+        if (!doc.exists) {
+            return res.status(404).json({ message: "Vinho não encontrado." });
+        }
+
+        const wine = doc.data();
+
+        if (wine.userId !== userId) {
+            return res.status(403).json({ message: "Acesso negado a este vinho." });
+        }
+
+        return res.status(200).json({ id: doc.id, ...wine });
+    } catch (error) {
+        console.error("Erro ao buscar vinho por ID:", error);
+        return res.status(500).json({ message: "Erro ao buscar vinho." });
+    }
+}
