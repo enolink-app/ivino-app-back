@@ -1,4 +1,5 @@
 import db from "../models/firebase.js";
+import generateInviteCode from "../functions/generateInviteCode.js";
 
 export async function createEvent(req, res) {
     const { name, organizerId, dateStart, dateEnd, wines, participants, status } = req.body;
@@ -8,6 +9,8 @@ export async function createEvent(req, res) {
     }
 
     try {
+        const inviteCode = generateInviteCode();
+
         const novoEvento = {
             name,
             organizerId,
@@ -16,6 +19,7 @@ export async function createEvent(req, res) {
             wines: wines || [],
             participants: participants || [],
             status,
+            inviteCode,
             createdAt: new Date(),
             updatedAt: new Date(),
         };
