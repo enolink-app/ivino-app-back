@@ -46,6 +46,25 @@ export const listEvents = async (req, res) => {
     }
 };
 
+export const getEventByUser = async (req, res) => {
+    const { id } = req.params;
+    const uid = req.user.uid;
+
+    try {
+        const snapshot = await db.collection("events").where("createdBy", "==", uid).get();
+
+        const events = [];
+        snapshot.forEach((doc) => {
+            events.push({ id: doc.id, ...doc.data() });
+        });
+
+        res.status(200).json(events);
+    } catch (error) {
+        console.error("Erro ao buscar evento por ID:", error);
+        return res.status(500).json({ error: "Erro interno do servidor" });
+    }
+};
+
 export const getEventById = async (req, res) => {
     const { id } = req.params;
 
