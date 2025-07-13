@@ -162,3 +162,110 @@ export const editEvent = async (req, res) => {
         res.status(500).json({ erro: "Erro ao atualizar evento", detalhes: error.message });
     }
 };
+
+// Adicione estas funções ao seu controller
+export const joinEvent = async (req, res) => {
+    const { inviteCode } = req.params;
+    const { userId, userName } = req.body;
+
+    try {
+        // Busca evento pelo código de convite
+        const snapshot = await db.collection("events").where("inviteCode", "==", inviteCode).limit(1).get();
+
+        if (snapshot.empty) {
+            return res.status(404).json({ error: "Evento não encontrado ou código inválido" });
+        }
+
+        const eventDoc = snapshot.docs[0];
+        const eventData = eventDoc.data();
+
+        // Verifica se usuário já está no evento
+        const isParticipant = eventData.participants.some((p) => p.id === userId);
+        if (isParticipant) {
+            return res.status(200).json({
+                message: "Você já está participando deste evento",
+                eventId: eventDoc.id,
+            });
+        }
+
+        // Adiciona participante
+        const newParticipant = {
+            id: userId,
+            name: userName,
+            joinedAt: new Date(),
+            isGuest: false,
+        };
+
+        await eventDoc.ref.update({
+            participants: [...eventData.participants, newParticipant],
+            updatedAt: new Date(),
+        });
+
+        res.status(200).json({
+            message: "Participante adicionado com sucesso",
+            eventId: eventDoc.id,
+        });
+    } catch (error) {
+        console.error("Erro ao entrar no evento:", error);
+        res.status(500).json({ error: "Erro ao entrar no evento" });
+    }
+};
+
+export const leaveEvent = async (req, res) => {
+    const { eventId, userId } = req.params;
+
+    try {
+        const eventRef = db.collection("events").doc(eventId);
+        const eventDoc = await eventRef.get();
+
+        if (!eventDoc.exists) {
+            return res.status(404).json({ error: "Evento não encontrado" });
+        }
+
+        const eventData = eventDoc.data();
+        const updatedParticipants = eventData.participants.filter((p) => p.id !== userId);
+
+        await eventRef.update({
+            participants: updatedParticipants,
+            updatedAt: new Date(),
+        });
+
+        res.status(200).json({ message: "Você saiu do evento com sucesso" });
+    } catch (error) {
+        console.error("Erro ao sair do evento:", error);
+        res.status(500).json({ error: "Erro ao sair do evento" });
+    }
+};
+
+export const generateNewInviteCode = async (req, res) => {
+    const { eventId } = req.params;
+    const { userId } = req.body;
+
+    try {
+        const eventRef = db.collection("events").doc(eventId);
+        const eventDoc = await eventRef.get();
+
+        if (!eventDoc.exists) {
+            return res.status(404).json({ error: "Evento não encontrado" });
+        }
+
+        const eventData = eventDoc.data();
+
+        // Verifica se o usuário é o organizador
+        if (eventData.organizerId !== userId) {
+            return res.status(403).json({ error: "Apenas o organizador pode gerar novo código" });
+        }
+
+        const newInviteCode = generateInviteCode();
+
+        await eventRef.update({
+            inviteCode: newInviteCode,
+            updatedAt: new Date(),
+        });
+
+        res.status(200).json({ newInviteCode });
+    } catch (error) {
+        console.error("Erro ao gerar novo código:", error);
+        res.status(500).json({ error: "Erro ao gerar novo código de convite" });
+    }
+};
