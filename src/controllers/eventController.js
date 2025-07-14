@@ -33,16 +33,12 @@ export async function createEvent(req, res) {
 
 export const listEvents = async (req, res) => {
     try {
-        const snapshot = await db.collection("events").get();
+        const snapshot = await db.collection("events").orderBy("createdAt", "desc").limit(20).get();
 
-        const events = [];
-        snapshot.forEach((doc) => {
-            events.push({ id: doc.id, ...doc.data() });
-        });
-
+        const events = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         res.status(200).json(events);
     } catch (error) {
-        res.status(500).json({ erro: "Erro ao buscar eventos", detalhes: error.message });
+        res.status(500).json({ error: "Erro ao buscar eventos" });
     }
 };
 
@@ -69,16 +65,13 @@ export const getEventById = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const eventDoc = await db.collection("events").doc(id).get();
+        const doc = await db.collection("events").doc(id).get();
 
-        if (!eventDoc.exists) {
-            return res.status(404).json({ error: "Evento não encontrado" });
-        }
+        if (!doc.exists) return res.status(404).json({ error: "Evento não encontrado" });
 
-        return res.status(200).json({ id: eventDoc.id, ...eventDoc.data() });
+        res.status(200).json({ id: doc.id, ...doc.data() });
     } catch (error) {
-        console.error("Erro ao buscar evento por ID:", error);
-        return res.status(500).json({ error: "Erro interno do servidor" });
+        res.status(500).json({ error: "Erro ao buscar evento" });
     }
 };
 
