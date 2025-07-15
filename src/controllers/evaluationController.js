@@ -118,7 +118,7 @@ export async function createEvaluation(req, res) {
     } catch (error) {
         console.error("Erro ao registrar avaliação:", error);
         return res.status(500).json({
-            error: "Erro ao registrar avaliação",
+            error: `Erro ao registrar avaliação: ${error}`,
             details: process.env.NODE_ENV === "development" ? error.message : null,
         });
     }

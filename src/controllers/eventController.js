@@ -120,7 +120,7 @@ export const evaluateWine = async (req, res) => {
         return res.status(200).json({ message: "Avaliação registrada com sucesso", wines });
     } catch (error) {
         console.error("Erro ao avaliar vinho:", error);
-        return res.status(500).json({ error: "Erro ao registrar avaliação" });
+        return res.status(500).json({ error: `Erro ao registrar avaliação: ${error}` });
     }
 };
 
