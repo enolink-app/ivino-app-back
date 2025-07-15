@@ -94,12 +94,10 @@ export const evaluateWine = async (req, res) => {
             return res.status(400).json({ error: "Vinho não encontrado no evento" });
         }
 
-        // Inicializa array de avaliações se não existir
         if (!wines[wineIndex].evaluations) {
             wines[wineIndex].evaluations = [];
         }
 
-        // Impede que o mesmo usuário avalie duas vezes
         const alreadyEvaluated = wines[wineIndex].evaluations.some((ev) => ev.userId === userId);
         if (alreadyEvaluated) {
             return res.status(400).json({ error: "Você já avaliou esse vinho" });
@@ -114,7 +112,6 @@ export const evaluateWine = async (req, res) => {
             createdAt: new Date().toISOString(),
         });
 
-        // Atualiza o evento com as novas avaliações
         await eventRef.update({ wines });
 
         return res.status(200).json({ message: "Avaliação registrada com sucesso", wines });
@@ -156,13 +153,11 @@ export const editEvent = async (req, res) => {
     }
 };
 
-// Adicione estas funções ao seu controller
 export const joinEvent = async (req, res) => {
     const { inviteCode } = req.params;
     const { userId, userName } = req.body;
 
     try {
-        // Busca evento pelo código de convite
         const snapshot = await db.collection("events").where("inviteCode", "==", inviteCode).limit(1).get();
 
         if (snapshot.empty) {
@@ -172,7 +167,6 @@ export const joinEvent = async (req, res) => {
         const eventDoc = snapshot.docs[0];
         const eventData = eventDoc.data();
 
-        // Verifica se usuário já está no evento
         const isParticipant = eventData.participants.some((p) => p.id === userId);
         if (isParticipant) {
             return res.status(200).json({
@@ -181,7 +175,6 @@ export const joinEvent = async (req, res) => {
             });
         }
 
-        // Adiciona participante
         const newParticipant = {
             id: userId,
             name: userName,
@@ -244,7 +237,6 @@ export const generateNewInviteCode = async (req, res) => {
 
         const eventData = eventDoc.data();
 
-        // Verifica se o usuário é o organizador
         if (eventData.organizerId !== userId) {
             return res.status(403).json({ error: "Apenas o organizador pode gerar novo código" });
         }
