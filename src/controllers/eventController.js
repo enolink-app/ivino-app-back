@@ -93,14 +93,12 @@ export const evaluateWine = async (req, res) => {
         }
 
         const eventData = eventDoc.data();
-        const wines = [...(eventData.wines || [])]; // Cria cópia do array
+        const wines = [...(eventData.wines || [])];
 
-        // Valida índice do vinho
         if (wineIndex < 0 || wineIndex >= wines.length) {
             return res.status(400).json({ error: "Índice do vinho inválido" });
         }
 
-        // Prepara avaliação com valores padrão
         const newEvaluation = {
             wineId: String(wineId),
             userId: String(userId),
@@ -111,21 +109,17 @@ export const evaluateWine = async (req, res) => {
             createdAt: new Date().toISOString(),
         };
 
-        // Inicializa array de avaliações se não existir
         if (!wines[wineIndex].evaluations) {
             wines[wineIndex].evaluations = [];
         }
 
-        // Verifica se usuário já avaliou
         const alreadyEvaluated = wines[wineIndex].evaluations.some((ev) => ev.userId === userId);
         if (alreadyEvaluated) {
             return res.status(400).json({ error: "Você já avaliou este vinho" });
         }
 
-        // Adiciona nova avaliação
         wines[wineIndex].evaluations.push(newEvaluation);
 
-        // Atualiza com { merge: true } para evitar sobrescrita acidental
         await eventRef.set({ wines }, { merge: true });
 
         return res.status(200).json({
