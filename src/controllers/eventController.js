@@ -47,7 +47,7 @@ export const getEventByUser = async (req, res) => {
     const uid = req.user.uid;
 
     try {
-        const snapshot = await db.collection("events").where("createdBy", "==", uid).get();
+        const snapshot = await db.collection("events").where("organizerId", "==", uid).get();
 
         const events = [];
         snapshot.forEach((doc) => {
