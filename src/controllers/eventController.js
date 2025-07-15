@@ -77,7 +77,12 @@ export const getEventById = async (req, res) => {
 
 export const evaluateWine = async (req, res) => {
     const { id: eventId } = req.params;
-    const { wineIndex, userId, aroma, sabor, cor, notes } = req.body;
+    const { wineId, wineIndex, userId, aroma, color, flavor, notes } = req.body;
+
+    // Validação reforçada
+    if (!eventId || !wineId || wineIndex === undefined || !userId) {
+        return res.status(400).json({ error: "Dados incompletos para avaliação" });
+    }
 
     try {
         const eventRef = db.collection("events").doc(eventId);
@@ -88,36 +93,53 @@ export const evaluateWine = async (req, res) => {
         }
 
         const eventData = eventDoc.data();
-        const wines = eventData.wines || [];
+        const wines = [...(eventData.wines || [])]; // Cria cópia do array
 
-        if (!wines[wineIndex]) {
-            return res.status(400).json({ error: "Vinho não encontrado no evento" });
+        // Valida índice do vinho
+        if (wineIndex < 0 || wineIndex >= wines.length) {
+            return res.status(400).json({ error: "Índice do vinho inválido" });
         }
 
+        // Prepara avaliação com valores padrão
+        const newEvaluation = {
+            wineId: String(wineId),
+            userId: String(userId),
+            aroma: Number(aroma) || 0,
+            color: Number(color) || 0,
+            flavor: Number(flavor) || 0,
+            notes: String(notes || ""),
+            createdAt: new Date().toISOString(),
+        };
+
+        // Inicializa array de avaliações se não existir
         if (!wines[wineIndex].evaluations) {
             wines[wineIndex].evaluations = [];
         }
 
+        // Verifica se usuário já avaliou
         const alreadyEvaluated = wines[wineIndex].evaluations.some((ev) => ev.userId === userId);
         if (alreadyEvaluated) {
-            return res.status(400).json({ error: "Você já avaliou esse vinho" });
+            return res.status(400).json({ error: "Você já avaliou este vinho" });
         }
 
-        wines[wineIndex].evaluations.push({
-            userId,
-            aroma,
-            sabor,
-            cor,
-            notes,
-            createdAt: new Date().toISOString(),
+        // Adiciona nova avaliação
+        wines[wineIndex].evaluations.push(newEvaluation);
+
+        // Atualiza com { merge: true } para evitar sobrescrita acidental
+        await eventRef.set({ wines }, { merge: true });
+
+        return res.status(200).json({
+            success: true,
+            message: "Avaliação registrada com sucesso",
+            wineId,
+            evaluation: newEvaluation,
         });
-
-        await eventRef.update({ wines });
-
-        return res.status(200).json({ message: "Avaliação registrada com sucesso", wines });
     } catch (error) {
         console.error("Erro ao avaliar vinho:", error);
-        return res.status(500).json({ error: `Erro ao registrar avaliação: ${error}` });
+        return res.status(500).json({
+            error: "Erro ao registrar avaliação",
+            details: error.message,
+        });
     }
 };
 
