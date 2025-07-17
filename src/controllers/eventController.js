@@ -122,6 +122,36 @@ export const evaluateWine = async (req, res) => {
 
         await eventRef.set({ wines }, { merge: true });
 
+        const wineData = wines[wineIndex];
+        const wineRef = db.collection("wines").doc(wineId);
+
+        await wineRef.set(
+            {
+                name: wineData.name,
+                country: wineData.country,
+                image: wineData.image,
+                lastEvaluation: new Date().toISOString(),
+            },
+            { merge: true }
+        );
+
+        const rating = (newEvaluation.aroma + newEvaluation.color + newEvaluation.flavor) / 3;
+        const rankingRef = db.collection("wineRankings").doc(wineId);
+
+        await rankingRef.set(
+            {
+                wineId,
+                name: wineData.name,
+                country: wineData.country,
+                image: wineData.image,
+                $increment: {
+                    totalEvaluations: 1,
+                    totalRating: rating,
+                },
+            },
+            { merge: true }
+        );
+
         return res.status(200).json({
             success: true,
             message: "Avaliação registrada com sucesso",
@@ -268,5 +298,61 @@ export const generateNewInviteCode = async (req, res) => {
     } catch (error) {
         console.error("Erro ao gerar novo código:", error);
         res.status(500).json({ error: "Erro ao gerar novo código de convite" });
+    }
+};
+
+export const getTopWines = async (req, res) => {
+    try {
+        const eventsSnapshot = await db.collection("events").where("status", "==", "COMPLETED").get();
+
+        if (eventsSnapshot.empty) {
+            return res.status(200).json([]);
+        }
+
+        const allWines = {};
+
+        eventsSnapshot.forEach((eventDoc) => {
+            const eventData = eventDoc.data();
+            eventData.wines.forEach((wine) => {
+                if (!wine.evaluations || wine.evaluations.length === 0) return;
+
+                const totalEvaluations = wine.evaluations.length;
+                const totalScore = wine.evaluations.reduce((sum, evalu) => {
+                    return sum + (evalu.aroma + evalu.color + evalu.flavor) / 3;
+                }, 0);
+
+                const averageRating = totalScore / totalEvaluations;
+
+                if (!allWines[wine.id]) {
+                    allWines[wine.id] = {
+                        wineId: wine.id,
+                        name: wine.name,
+                        country: wine.country,
+                        image: wine.image,
+                        description: wine.description,
+                        totalEvaluations: 0,
+                        totalScore: 0,
+                        eventsCount: 0,
+                    };
+                }
+
+                allWines[wine.id].totalEvaluations += totalEvaluations;
+                allWines[wine.id].totalScore += totalScore;
+                allWines[wine.id].eventsCount += 1;
+            });
+        });
+
+        const winesArray = Object.values(allWines).map((wine) => ({
+            ...wine,
+            averageRating: wine.totalScore / wine.totalEvaluations,
+            totalEvaluations: wine.totalEvaluations,
+        }));
+
+        const topWines = winesArray.sort((a, b) => b.averageRating - a.averageRating).slice(0, 10);
+
+        res.status(200).json(topWines);
+    } catch (error) {
+        console.error("Erro ao buscar top vinhos:", error);
+        res.status(500).json({ error: "Erro ao buscar rankings" });
     }
 };
