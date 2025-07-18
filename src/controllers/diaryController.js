@@ -42,7 +42,7 @@ export const getUserDiaryEntries = async (req, res) => {
 
         res.status(200).json(entries);
     } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar entradas do diário" });
+        res.status(500).json({ error: `Erro ao buscar entradas do diário: ${error}` });
     }
 };
 
