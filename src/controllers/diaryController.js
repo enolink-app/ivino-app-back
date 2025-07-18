@@ -25,7 +25,7 @@ export const createDiaryEntry = async (req, res) => {
             ...diaryEntry,
         });
     } catch (error) {
-        res.status(500).json({ error: "Erro ao criar entrada no diário" });
+        res.status(500).json({ error: `Erro ao criar entrada no diário: ${error}` });
     }
 };
 

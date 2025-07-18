@@ -89,7 +89,7 @@ export async function getWineById(req, res) {
 
         const wine = doc.data();
 
-        if (wine.userId !== userId) {
+        if (wine.createdBy !== userId) {
             return res.status(403).json({ message: "Acesso negado a este vinho." });
         }
 
