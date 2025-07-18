@@ -140,6 +140,7 @@ export const evaluateWine = async (req, res) => {
 
         await rankingRef.set(
             {
+                eventId,
                 wineId,
                 name: wineData.name,
                 country: wineData.country,
