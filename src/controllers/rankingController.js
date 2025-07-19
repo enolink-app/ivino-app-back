@@ -12,7 +12,11 @@ export const getEventRanking = async (req, res) => {
 
         const wineIds = ranksSnap.docs.map((doc) => doc.data().wineId);
 
-        const winesSnap = await db.collection("wines").where(admin.firestore.FieldPath.documentId(), "in", wineIds).get();
+        // SOLUÇÃO 1: Usando db.firestore.FieldPath
+        const winesSnap = await db.collection("wines").where(db.firestore.FieldPath.documentId(), "in", wineIds).get();
+
+        // OU SOLUÇÃO 3: Usando "__name__"
+        // const winesSnap = await db.collection("wines").where("__name__", "in", wineIds).get();
 
         const winesMap = new Map(winesSnap.docs.map((doc) => [doc.id, doc.data()]));
 
@@ -33,6 +37,7 @@ export const getEventRanking = async (req, res) => {
 
         res.status(200).json(wineStats);
     } catch (error) {
-        res.status(500).json({ error: `Erro ao buscar ranking: ${error}` });
+        console.error("Erro detalhado:", error);
+        res.status(500).json({ error: `Erro ao buscar ranking: ${error.message || error}` });
     }
 };
