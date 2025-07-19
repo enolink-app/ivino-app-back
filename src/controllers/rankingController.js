@@ -26,7 +26,7 @@ export const getEventRanking = async (req, res) => {
                     name: wine.name || "Desconhecido",
                     region: wine.country || "",
                     image: wine.image || "",
-                    rating: Number(data.average.toFixed(2)),
+                    rating: data.average.toFixed(2),
                     completed: data.completed || false,
                 };
             })
