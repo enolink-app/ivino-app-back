@@ -33,6 +33,6 @@ export const getEventRanking = async (req, res) => {
 
         res.status(200).json(wineStats);
     } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar ranking" });
+        res.status(500).json({ error: `Erro ao buscar ranking: ${error}` });
     }
 };
