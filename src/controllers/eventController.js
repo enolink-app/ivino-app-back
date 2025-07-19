@@ -38,7 +38,7 @@ export const listEvents = async (req, res) => {
         const events = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         res.status(200).json(events);
     } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar eventos" });
+        res.status(500).json({ error: `Erro ao buscar eventos: ${error}` });
     }
 };
 
@@ -57,7 +57,7 @@ export const getEventByUser = async (req, res) => {
         res.status(200).json(events);
     } catch (error) {
         console.error("Erro ao buscar evento por ID:", error);
-        return res.status(500).json({ error: "Erro interno do servidor" });
+        return res.status(500).json({ error: `Erro interno do servidor: ${error}` });
     }
 };
 
@@ -71,7 +71,7 @@ export const getEventById = async (req, res) => {
 
         res.status(200).json({ id: doc.id, ...doc.data() });
     } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar evento" });
+        res.status(500).json({ error: `Erro ao buscar evento: ${error}` });
     }
 };
 
@@ -196,7 +196,7 @@ export const editEvent = async (req, res) => {
 
         res.status(200).json({ mensagem: "Evento atualizado com sucesso", updates });
     } catch (error) {
-        res.status(500).json({ erro: "Erro ao atualizar evento", detalhes: error.message });
+        res.status(500).json({ erro: "Erro ao atualizar evento", details: error.message });
     }
 };
 
@@ -240,7 +240,10 @@ export const joinEvent = async (req, res) => {
         });
     } catch (error) {
         console.error("Erro ao entrar no evento:", error);
-        res.status(500).json({ error: "Erro ao entrar no evento" });
+        res.status(500).json({
+            error: "Erro ao entrar no evento",
+            details: error.message,
+        });
     }
 };
 
@@ -266,7 +269,10 @@ export const leaveEvent = async (req, res) => {
         res.status(200).json({ message: "Você saiu do evento com sucesso" });
     } catch (error) {
         console.error("Erro ao sair do evento:", error);
-        res.status(500).json({ error: "Erro ao sair do evento" });
+        res.status(500).json({
+            error: "Erro ao sair do evento",
+            details: error.message,
+        });
     }
 };
 
@@ -298,7 +304,10 @@ export const generateNewInviteCode = async (req, res) => {
         res.status(200).json({ newInviteCode });
     } catch (error) {
         console.error("Erro ao gerar novo código:", error);
-        res.status(500).json({ error: "Erro ao gerar novo código de convite" });
+        res.status(500).json({
+            error: "Erro ao gerar o código do convite",
+            details: error.message,
+        });
     }
 };
 
@@ -354,6 +363,9 @@ export const getTopWines = async (req, res) => {
         res.status(200).json(topWines);
     } catch (error) {
         console.error("Erro ao buscar top vinhos:", error);
-        res.status(500).json({ error: "Erro ao buscar rankings" });
+        res.status(500).json({
+            error: "Erro ao buscar ranking",
+            details: error.message,
+        });
     }
 };
