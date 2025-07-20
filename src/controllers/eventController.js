@@ -366,48 +366,71 @@ export const generateNewInviteCode = async (req, res) => {
 
 export const getTopWines = async (req, res) => {
     try {
-        // 1. Busca todos os eventos finalizados (CLOSED ou COMPLETED)
+        // Busca tanto eventos CLOSED quanto COMPLETED (para compatibilidade)
         const eventsSnapshot = await db.collection("events").where("status", "in", ["CLOSED", "COMPLETED"]).get();
 
         if (eventsSnapshot.empty) {
-            return res.status(200).json([]);
+            return res.status(200).json([]); // Retorna array vazio se não houver eventos
         }
 
-        // 2. Agrega dados de wineRankings em vez de events
-        const rankingsSnapshot = await db.collection("wineRankings").where("isFinal", "==", true).get();
+        const allWines = {};
 
-        if (rankingsSnapshot.empty) {
-            return res.status(200).json([]);
-        }
+        eventsSnapshot.forEach((eventDoc) => {
+            const eventData = eventDoc.data();
 
-        // 3. Processa os rankings
-        const wineStats = rankingsSnapshot.docs.map((doc) => {
-            const data = doc.data();
-            return {
-                id: data.wineId,
-                name: data.name,
-                country: data.country,
-                image: data.image,
-                averageRating: data.finalAverage || 0,
-                evaluationsCount: data.totalEvaluations || 0,
-            };
+            // Verifica se existem vinhos e avaliações
+            if (!eventData.wines || !Array.isArray(eventData.wines)) return;
+
+            eventData.wines.forEach((wine) => {
+                if (!wine.evaluations || wine.evaluations.length === 0) return;
+
+                const totalEvaluations = wine.evaluations.length;
+                const totalScore = wine.evaluations.reduce((sum, evalu) => {
+                    return sum + (evalu.aroma + evalu.color + evalu.flavor) / 3;
+                }, 0);
+
+                const averageRating = totalScore / totalEvaluations;
+
+                if (!allWines[wine.id]) {
+                    allWines[wine.id] = {
+                        wineId: wine.id,
+                        name: wine.name || "Vinho Desconhecido",
+                        country: wine.country || "País Desconhecido",
+                        image: wine.image || null,
+                        description: wine.description || "",
+                        totalEvaluations: 0,
+                        totalScore: 0,
+                        eventsCount: 0,
+                    };
+                }
+
+                allWines[wine.id].totalEvaluations += totalEvaluations;
+                allWines[wine.id].totalScore += totalScore;
+                allWines[wine.id].eventsCount += 1;
+            });
         });
 
-        // 4. Ordena e pega os top 10
-        const topWines = wineStats
-            .filter((wine) => wine.averageRating > 0)
-            .sort((a, b) => b.averageRating - a.averageRating)
-            .slice(0, 10);
+        // Converte para array e calcula médias finais
+        const winesArray = Object.values(allWines)
+            .map((wine) => ({
+                ...wine,
+                averageRating: wine.totalEvaluations > 0 ? wine.totalScore / wine.totalEvaluations : 0,
+            }))
+            .filter((wine) => wine.averageRating > 0); // Filtra vinhos com avaliação válida
+
+        // Ordena e pega top 10
+        const topWines = winesArray.sort((a, b) => b.averageRating - a.averageRating).slice(0, 10);
 
         return res.status(200).json(topWines);
     } catch (error) {
-        console.error("Erro ao buscar top vinhos:", error);
+        console.error("Erro detalhado ao buscar top vinhos:", error);
         return res.status(500).json({
             error: "Erro ao buscar ranking",
-            details: error.message,
+            details: process.env.NODE_ENV === "development" ? error.message : undefined,
         });
     }
 };
+
 // eventController.js
 export const closeEvent = async (req, res) => {
     const { id: eventId } = req.params;
