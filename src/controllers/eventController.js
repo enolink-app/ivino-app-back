@@ -1,6 +1,6 @@
 import db from "../models/firebase.js";
 import generateInviteCode from "../functions/generateInviteCode.js";
-
+import admin from "firebase-admin";
 export async function createEvent(req, res) {
     const { name, organizerId, dateStart, dateEnd, wines, participants, status } = req.body;
 
@@ -421,4 +421,71 @@ export const getTopWines = async (req, res) => {
             details: error.message,
         });
     }
+};
+// eventController.js
+export const closeEvent = async (req, res) => {
+    const { id: eventId } = req.params;
+    const { userId } = req.body; // ID do usuário que está tentando encerrar
+
+    try {
+        const eventRef = db.collection("events").doc(eventId);
+        const eventDoc = await eventRef.get();
+
+        if (!eventDoc.exists) {
+            return res.status(404).json({ error: "Evento não encontrado" });
+        }
+
+        const eventData = eventDoc.data();
+
+        // Verifica se o usuário é o organizador
+        if (eventData.organizerId !== userId) {
+            return res.status(403).json({ error: "Apenas o organizador pode encerrar o evento" });
+        }
+
+        // Verifica se o evento já está encerrado
+        if (eventData.status === "CLOSED") {
+            return res.status(400).json({ error: "O evento já está encerrado" });
+        }
+
+        // Atualiza o status do evento
+        await eventRef.update({
+            status: "CLOSED",
+            closedAt: new Date().toISOString(),
+        });
+
+        // Opcional: Processar rankings finais
+        await generateFinalRankings(eventId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Evento encerrado com sucesso",
+            closedAt: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error("Erro ao encerrar evento:", error);
+        return res.status(500).json({
+            error: "Erro ao encerrar evento",
+            details: error.message,
+        });
+    }
+};
+
+// Função auxiliar para gerar rankings finais (opcional)
+const generateFinalRankings = async (eventId) => {
+    const rankingsRef = db.collection("wineRankings").where("eventId", "==", eventId);
+    const snapshot = await rankingsRef.get();
+
+    const batch = db.batch();
+
+    snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.totalEvaluations > 0) {
+            batch.update(doc.ref, {
+                finalAverage: data.totalRating / data.totalEvaluations,
+                isFinal: true,
+            });
+        }
+    });
+
+    await batch.commit();
 };
