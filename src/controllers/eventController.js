@@ -465,7 +465,6 @@ export const closeEvent = async (req, res) => {
         console.error("Erro ao encerrar evento:", error);
         return res.status(500).json({
             error: `Erro ao encerrar evento: ${error}`,
-            details: error.message,
         });
     }
 };
