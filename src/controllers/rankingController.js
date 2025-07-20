@@ -11,29 +11,38 @@ export const getEventRanking = async (req, res) => {
             return res.status(200).json([]);
         }
 
-        const wineIds = ranksSnap.docs.map((doc) => doc.data().wineId);
-
-        const winesSnap = await db.collection("wines").where(admin.firestore.FieldPath.documentId(), "in", wineIds).get();
-
-        const winesMap = new Map(winesSnap.docs.map((doc) => [doc.id, doc.data()]));
-
-        const wineStats = ranksSnap.docs
-            .map((doc) => {
+        const wineStats = await Promise.all(
+            ranksSnap.docs.map(async (doc) => {
                 const data = doc.data();
-                const wine = winesMap.get(data.wineId) || {};
+
+                // Busca os detalhes do vinho
+                const wineDoc = await db.collection("wines").doc(data.wineId).get();
+                const wine = wineDoc.exists ? wineDoc.data() : {};
+
+                // Calcula a média corretamente
+                const average = data.totalEvaluations > 0 ? (data.totalRating / data.totalEvaluations).toFixed(2) : 0;
+
                 return {
                     id: data.wineId,
-                    name: wine.name || "Desconhecido",
-                    region: wine.country || "",
-                    image: wine.image || "",
-                    rating: Number(data.average).toFixed(2),
+                    name: wine.name || data.name || "Desconhecido",
+                    region: wine.country || data.country || "",
+                    image: wine.image || data.image || "",
+                    rating: Number(average),
                     completed: data.completed || false,
+                    evaluationsCount: data.totalEvaluations || 0,
                 };
             })
-            .sort((a, b) => b.rating - a.rating);
+        );
+
+        // Ordena por rating (decrescente)
+        wineStats.sort((a, b) => b.rating - a.rating);
 
         res.status(200).json(wineStats);
     } catch (error) {
-        res.status(500).json({ error: `Erro ao buscar ranking: ${error}` });
+        console.error("Erro detalhado ao buscar ranking:", error);
+        res.status(500).json({
+            error: "Erro ao buscar ranking",
+            details: error.message,
+        });
     }
 };

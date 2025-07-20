@@ -81,7 +81,21 @@ export const evaluateWine = async (req, res) => {
 
     // Validação reforçada
     if (!eventId || !wineId || wineIndex === undefined || !userId) {
-        return res.status(400).json({ error: "Dados incompletos para avaliação" });
+        return res.status(400).json({
+            error: "Dados incompletos para avaliação",
+            details: "Faltam campos obrigatórios (eventId, wineId, wineIndex ou userId)",
+        });
+    }
+
+    // Validação dos ratings
+    const ratings = { aroma, color, flavor };
+    for (const [key, value] of Object.entries(ratings)) {
+        if (isNaN(value) || value < 1 || value > 5) {
+            return res.status(400).json({
+                error: "Avaliação inválida",
+                details: `${key} deve ser entre 1 e 5`,
+            });
+        }
     }
 
     try {
@@ -89,81 +103,120 @@ export const evaluateWine = async (req, res) => {
         const eventDoc = await eventRef.get();
 
         if (!eventDoc.exists) {
-            return res.status(404).json({ error: "Evento não encontrado" });
+            return res.status(404).json({
+                error: "Evento não encontrado",
+                details: `Evento com ID ${eventId} não existe`,
+            });
         }
 
         const eventData = eventDoc.data();
         const wines = [...(eventData.wines || [])];
 
+        // Verifica se o índice do vinho é válido
         if (wineIndex < 0 || wineIndex >= wines.length) {
-            return res.status(400).json({ error: "Índice do vinho inválido" });
+            return res.status(400).json({
+                error: "Índice do vinho inválido",
+                details: `Índice ${wineIndex} fora do intervalo`,
+            });
         }
 
+        // Cria a nova avaliação
         const newEvaluation = {
             wineId: String(wineId),
             userId: String(userId),
-            aroma: Number(aroma) || 0,
-            color: Number(color) || 0,
-            flavor: Number(flavor) || 0,
+            aroma: Math.min(5, Math.max(1, Number(aroma))), // Garante entre 1-5
+            color: Math.min(5, Math.max(1, Number(color))), // Garante entre 1-5
+            flavor: Math.min(5, Math.max(1, Number(flavor))), // Garante entre 1-5
             notes: String(notes || ""),
-            createdAt: new Date().toISOString(),
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
         };
 
-        if (!wines[wineIndex].evaluations) {
-            wines[wineIndex].evaluations = [];
+        // Verifica se já existe avaliação deste usuário
+        const wineEvaluations = wines[wineIndex].evaluations || [];
+        const userEvaluationIndex = wineEvaluations.findIndex((ev) => ev.userId === userId);
+
+        if (userEvaluationIndex >= 0) {
+            // Atualiza avaliação existente
+            wineEvaluations[userEvaluationIndex] = newEvaluation;
+        } else {
+            // Adiciona nova avaliação
+            wineEvaluations.push(newEvaluation);
         }
 
-        const alreadyEvaluated = wines[wineIndex].evaluations.some((ev) => ev.userId === userId);
-        if (alreadyEvaluated) {
-            return res.status(400).json({ error: "Você já avaliou este vinho" });
-        }
+        // Atualiza o array de avaliações
+        wines[wineIndex].evaluations = wineEvaluations;
 
-        wines[wineIndex].evaluations.push(newEvaluation);
+        // Calcula a média da avaliação
+        const rating = (newEvaluation.aroma + newEvaluation.color + newEvaluation.flavor) / 3;
 
-        await eventRef.set({ wines }, { merge: true });
+        // Atualiza o evento
+        await eventRef.update({
+            wines,
+            lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        });
 
-        const wineData = wines[wineIndex];
+        // Atualiza os dados do vinho
         const wineRef = db.collection("wines").doc(wineId);
-
         await wineRef.set(
             {
-                name: wineData.name,
-                country: wineData.country,
-                image: wineData.image,
-                lastEvaluation: new Date().toISOString(),
+                name: wines[wineIndex].name,
+                country: wines[wineIndex].country,
+                image: wines[wineIndex].image,
+                lastEvaluation: admin.firestore.FieldValue.serverTimestamp(),
             },
             { merge: true }
         );
 
-        const rating = (newEvaluation.aroma + newEvaluation.color + newEvaluation.flavor) / 3;
-        const rankingRef = db.collection("wineRankings").doc(wineId);
+        // Atualiza o ranking
+        const rankingRef = db.collection("wineRankings").doc(`${eventId}_${wineId}`);
 
-        await rankingRef.set(
-            {
-                eventId,
-                wineId,
-                name: wineData.name,
-                country: wineData.country,
-                image: wineData.image,
-                $increment: {
-                    totalEvaluations: 1,
-                    totalRating: rating,
+        if (userEvaluationIndex >= 0) {
+            // Se for atualização, ajusta os totais
+            const oldEvaluation = wineEvaluations[userEvaluationIndex];
+            const oldRating = (oldEvaluation.aroma + oldEvaluation.color + oldEvaluation.flavor) / 3;
+
+            await rankingRef.set(
+                {
+                    eventId,
+                    wineId,
+                    name: wines[wineIndex].name,
+                    country: wines[wineIndex].country,
+                    image: wines[wineIndex].image,
+                    totalRating: admin.firestore.FieldValue.increment(rating - oldRating),
+                    lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
                 },
-            },
-            { merge: true }
-        );
+                { merge: true }
+            );
+        } else {
+            // Se for nova avaliação
+            await rankingRef.set(
+                {
+                    eventId,
+                    wineId,
+                    name: wines[wineIndex].name,
+                    country: wines[wineIndex].country,
+                    image: wines[wineIndex].image,
+                    totalEvaluations: admin.firestore.FieldValue.increment(1),
+                    totalRating: admin.firestore.FieldValue.increment(rating),
+                    lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+                },
+                { merge: true }
+            );
+        }
 
         return res.status(200).json({
             success: true,
             message: "Avaliação registrada com sucesso",
             wineId,
             evaluation: newEvaluation,
+            rating: parseFloat(rating.toFixed(2)),
         });
     } catch (error) {
-        console.error("Erro ao avaliar vinho:", error);
+        console.error("Erro detalhado ao avaliar vinho:", error);
         return res.status(500).json({
             error: "Erro ao registrar avaliação",
             details: error.message,
+            stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
         });
     }
 };
