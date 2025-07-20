@@ -366,51 +366,57 @@ export const generateNewInviteCode = async (req, res) => {
 
 export const getTopWines = async (req, res) => {
     try {
+        // 1. Busca todos os eventos finalizados
         const eventsSnapshot = await db.collection("events").where("status", "==", "CLOSED").get();
 
         if (eventsSnapshot.empty) {
             return res.status(200).json([]);
         }
 
-        const allWines = {};
+        const wineStats = new Map(); // Usando Map para melhor performance
 
-        eventsSnapshot.forEach((eventDoc) => {
+        // 2. Processa cada evento
+        for (const eventDoc of eventsSnapshot.docs) {
             const eventData = eventDoc.data();
-            eventData.wines.forEach((wine) => {
-                if (!wine.evaluations || wine.evaluations.length === 0) return;
 
-                const totalEvaluations = wine.evaluations.length;
+            // 3. Processa cada vinho do evento
+            for (const wine of eventData.wines || []) {
+                if (!wine.evaluations || wine.evaluations.length === 0) continue;
+
+                // 4. Calcula a média do vinho no evento
                 const totalScore = wine.evaluations.reduce((sum, evalu) => {
                     return sum + (evalu.aroma + evalu.color + evalu.flavor) / 3;
                 }, 0);
 
-                const averageRating = totalScore / totalEvaluations;
+                const averageRating = totalScore / wine.evaluations.length;
 
-                if (!allWines[wine.id]) {
-                    allWines[wine.id] = {
+                // 5. Atualiza as estatísticas gerais do vinho
+                if (!wineStats.has(wine.id)) {
+                    wineStats.set(wine.id, {
                         wineId: wine.id,
-                        name: wine.name,
-                        country: wine.country,
-                        image: wine.image,
-                        description: wine.description,
+                        name: wine.name || "Nome não disponível",
+                        country: wine.country || "",
+                        image: wine.image || "",
                         totalEvaluations: 0,
                         totalScore: 0,
                         eventsCount: 0,
-                    };
+                    });
                 }
 
-                allWines[wine.id].totalEvaluations += totalEvaluations;
-                allWines[wine.id].totalScore += totalScore;
-                allWines[wine.id].eventsCount += 1;
-            });
-        });
+                const wineData = wineStats.get(wine.id);
+                wineData.totalEvaluations += wine.evaluations.length;
+                wineData.totalScore += totalScore;
+                wineData.eventsCount += 1;
+            }
+        }
 
-        const winesArray = Object.values(allWines).map((wine) => ({
+        // 6. Converte para array e calcula médias finais
+        const winesArray = Array.from(wineStats.values()).map((wine) => ({
             ...wine,
             averageRating: wine.totalScore / wine.totalEvaluations,
-            totalEvaluations: wine.totalEvaluations,
         }));
 
+        // 7. Ordena e pega os top 10
         const topWines = winesArray.sort((a, b) => b.averageRating - a.averageRating).slice(0, 10);
 
         res.status(200).json(topWines);
@@ -418,7 +424,7 @@ export const getTopWines = async (req, res) => {
         console.error("Erro ao buscar top vinhos:", error);
         res.status(500).json({
             error: "Erro ao buscar ranking",
-            details: error.message,
+            details: process.env.NODE_ENV === "development" ? error.message : undefined,
         });
     }
 };
