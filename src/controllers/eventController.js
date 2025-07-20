@@ -128,7 +128,7 @@ export const evaluateWine = async (req, res) => {
             color: Math.min(5, Math.max(1, Number(color))), // Garante entre 1-5
             flavor: Math.min(5, Math.max(1, Number(flavor))), // Garante entre 1-5
             notes: String(notes || ""),
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: new Date().toISOString(),
         };
 
         // Verifica se já existe avaliação deste usuário
@@ -152,7 +152,7 @@ export const evaluateWine = async (req, res) => {
         // Atualiza o evento
         await eventRef.update({
             wines,
-            lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+            lastUpdated: new Date().toISOString(),
         });
 
         // Atualiza os dados do vinho
@@ -162,7 +162,7 @@ export const evaluateWine = async (req, res) => {
                 name: wines[wineIndex].name,
                 country: wines[wineIndex].country,
                 image: wines[wineIndex].image,
-                lastEvaluation: admin.firestore.FieldValue.serverTimestamp(),
+                lastEvaluation: new Date().toISOString(),
             },
             { merge: true }
         );
