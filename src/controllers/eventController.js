@@ -366,7 +366,7 @@ export const generateNewInviteCode = async (req, res) => {
 
 export const getTopWines = async (req, res) => {
     try {
-        const eventsSnapshot = await db.collection("events").where("status", "==", "COMPLETED").get();
+        const eventsSnapshot = await db.collection("events").where("status", "==", "CLOSED").get();
 
         if (eventsSnapshot.empty) {
             return res.status(200).json([]);
