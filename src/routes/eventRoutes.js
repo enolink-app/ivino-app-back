@@ -22,7 +22,7 @@ router.get("/events/:id/user", verifiToken, getEventByUser);
 router.post("/events/join/:code", verifiToken, joinEvent);
 router.delete("/events/:eventId/leave/:userId", verifiToken, leaveEvent);
 router.post("/events/:eventId/generate-code", verifiToken, generateNewInviteCode);
-router.get("/events/top-wines", verifiToken, getTopWines);
+router.get("/events/top/wines", verifiToken, getTopWines);
 router.post("/events/:id/close", verifiToken, closeEvent);
 router.put("/events", verifiToken);
 export default router;

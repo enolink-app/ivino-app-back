@@ -44,7 +44,7 @@ export async function createEvaluation(req, res) {
         const eventSnap = await eventRef.get();
 
         if (!eventSnap.exists) {
-            return res.status(404).json({ error: "Evento não encontrado" });
+            return res.status(404).json({ error: "Evento não encontrado - Linha 47" });
         }
 
         const eventData = eventSnap.data();
@@ -191,7 +191,7 @@ export async function getWineEvaluations(req, res) {
         // Verificar se o usuário é participante do evento
         const eventSnap = await db.collection("events").doc(eventId).get();
         if (!eventSnap.exists) {
-            return res.status(404).json({ error: "Evento não encontrado" });
+            return res.status(404).json({ error: "Evento não encontrado - Linha 194" });
         }
 
         const eventData = eventSnap.data();

@@ -63,13 +63,15 @@ export const getEventByUser = async (req, res) => {
 
 export const getEventById = async (req, res) => {
     const { id } = req.params;
-
+    console.log("1", id);
     try {
+        console.log("2");
         const doc = await db.collection("events").doc(id).get();
-
-        if (!doc.exists) return res.status(404).json({ error: "Evento não encontrado" });
-
+        console.log("3");
+        if (!doc.exists) return res.status(404).json({ error: "Evento não encontrado - Linha 70" });
+        console.log("4");
         res.status(200).json({ id: doc.id, ...doc.data() });
+        console.log("4");
     } catch (error) {
         res.status(500).json({ error: `Erro ao buscar evento: ${error}` });
     }
@@ -104,7 +106,7 @@ export const evaluateWine = async (req, res) => {
 
         if (!eventDoc.exists) {
             return res.status(404).json({
-                error: "Evento não encontrado",
+                error: "Evento não encontrado - Linha 107",
                 details: `Evento com ID ${eventId} não existe`,
             });
         }
@@ -231,7 +233,7 @@ export const editEvent = async (req, res) => {
         const doc = await userRef.get();
 
         if (!doc.exists) {
-            return res.status(404).json({ erro: "Evento não encontrado" });
+            return res.status(404).json({ erro: "Evento não encontrado - Linha 234" });
         }
 
         const updates = {};
@@ -308,7 +310,7 @@ export const leaveEvent = async (req, res) => {
         const eventDoc = await eventRef.get();
 
         if (!eventDoc.exists) {
-            return res.status(404).json({ error: "Evento não encontrado" });
+            return res.status(404).json({ error: "Evento não encontrado - Linha 311" });
         }
 
         const eventData = eventDoc.data();
@@ -338,7 +340,7 @@ export const generateNewInviteCode = async (req, res) => {
         const eventDoc = await eventRef.get();
 
         if (!eventDoc.exists) {
-            return res.status(404).json({ error: "Evento não encontrado" });
+            return res.status(404).json({ error: "Evento não encontrado - Linha 341" });
         }
 
         const eventData = eventDoc.data();
@@ -366,25 +368,23 @@ export const generateNewInviteCode = async (req, res) => {
 
 export const getTopWines = async (req, res) => {
     try {
-        // Busca tanto eventos CLOSED quanto COMPLETED (para compatibilidade)
         const eventsSnapshot = await db.collection("events").where("status", "in", ["CLOSED", "COMPLETED"]).get();
 
         if (eventsSnapshot.empty) {
             return res.status(200).json([]); // Retorna array vazio se não houver eventos
         }
-
         const allWines = {};
 
         eventsSnapshot.forEach((eventDoc) => {
             const eventData = eventDoc.data();
 
-            // Verifica se existem vinhos e avaliações
             if (!eventData.wines || !Array.isArray(eventData.wines)) return;
 
             eventData.wines.forEach((wine) => {
                 if (!wine.evaluations || wine.evaluations.length === 0) return;
 
                 const totalEvaluations = wine.evaluations.length;
+
                 const totalScore = wine.evaluations.reduce((sum, evalu) => {
                     return sum + (evalu.aroma + evalu.color + evalu.flavor) / 3;
                 }, 0);
@@ -441,7 +441,7 @@ export const closeEvent = async (req, res) => {
         const eventDoc = await eventRef.get();
 
         if (!eventDoc.exists) {
-            return res.status(404).json({ error: "Evento não encontrado" });
+            return res.status(404).json({ error: "Evento não encontrado - Linha 455" });
         }
 
         const eventData = eventDoc.data();
