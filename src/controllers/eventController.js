@@ -1,6 +1,7 @@
 import db from "../models/firebase.js";
 import generateInviteCode from "../functions/generateInviteCode.js";
 import admin from "firebase-admin";
+import { notifyNewParticipant, notifyWineUnlocked } from "./notificationController.js";
 export async function createEvent(req, res) {
     const { name, organizerId, dateStart, dateEnd, wines, participants, status } = req.body;
 
@@ -16,7 +17,10 @@ export async function createEvent(req, res) {
             organizerId,
             dateStart,
             dateEnd,
-            wines: wines || [],
+            wines: wines.map((wine) => ({
+                ...wine,
+                isLocked: true, // Todos os vinhos começam bloqueados exceto o primeiro
+            })),
             participants: participants || [],
             status,
             inviteCode,
@@ -271,9 +275,10 @@ export const joinEvent = async (req, res) => {
 
         const isParticipant = eventData.participants.some((p) => p.id === userId);
         if (isParticipant) {
-            return res.status(200).json({
-                message: "Você já está participando deste evento",
+            res.status(200).json({
+                message: "Participante adicionado com sucesso",
                 eventId: eventDoc.id,
+                inviteLink: `https://app.enolink.com/join?code=${inviteCode}`,
             });
         }
 
@@ -288,7 +293,7 @@ export const joinEvent = async (req, res) => {
             participants: [...eventData.participants, newParticipant],
             updatedAt: new Date(),
         });
-
+        await notifyNewParticipant(eventDoc.id, userName);
         res.status(200).json({
             message: "Participante adicionado com sucesso",
             eventId: eventDoc.id,
@@ -503,4 +508,29 @@ const generateFinalRankings = async (eventId) => {
         });
 
     await batch.commit();
+};
+
+export const unlockWine = async (eventId, wineIndex) => {
+    try {
+        const eventRef = db.collection("events").doc(eventId);
+        const eventDoc = await eventRef.get();
+
+        if (!eventDoc.exists) return false;
+
+        const event = eventDoc.data();
+        const wines = [...event.wines];
+
+        if (wineIndex < 0 || wineIndex >= wines.length) return false;
+
+        wines[wineIndex].isLocked = false;
+
+        await eventRef.update({ wines });
+
+        await notifyWineUnlocked(eventId, wines[wineIndex].name);
+
+        return true;
+    } catch (error) {
+        console.error("Erro ao desbloquear vinho:", error);
+        return false;
+    }
 };

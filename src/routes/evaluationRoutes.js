@@ -6,4 +6,6 @@ import { createEvaluation, getMyEvaluationsByEvent } from "../controllers/evalua
 router.post("/evaluations", verifiToken, createEvaluation);
 router.get("/evaluations/:eventId", verifiToken, getMyEvaluationsByEvent);
 
+//PUBLIC
+router.get("/evaluations/:eventId", getMyEvaluationsByEvent);
 export default router;

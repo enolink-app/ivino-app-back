@@ -3,7 +3,7 @@ import db from "../models/firebase.js";
 export async function createWine(req, res) {
     const uid = req.user.uid;
     const { name, harvest, country, type, description, image, createdAt, updatedAt } = req.body;
-    if (!name || !harvest || !country || !type) {
+    if (!name || !harvest || !country) {
         return res.status(400).json({ erro: "Campos obrigatórios ausentes" });
     }
 
