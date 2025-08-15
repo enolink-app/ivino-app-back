@@ -10,15 +10,21 @@ export const setupEventListeners = () => {
                 const eventId = change.doc.id;
                 const eventData = change.doc.data();
 
-                const previousData = change.doc.metadata.hasPendingWrites ? (change.doc.metadata.fromCache ? null : change.doc.previousData) : null;
+                // Obter os dados anteriores corretamente
+                const previousData = change.type === "modified" ? snapshot.docChanges().find((c) => c.doc.id === eventId && c.type === "modified")?.doc.previousData : null;
 
-                if (previousData?.wines) {
+                // Verificar mudanças nos vinhos
+                if (previousData?.wines && eventData.wines) {
                     for (let i = 0; i < eventData.wines.length; i++) {
                         const prevWine = previousData.wines[i];
                         const currentWine = eventData.wines[i];
 
                         if (prevWine && currentWine && prevWine.isLocked && !currentWine.isLocked) {
-                            await notifyWineUnlocked(eventId, currentWine.name);
+                            try {
+                                await notifyWineUnlocked(eventId, currentWine.name);
+                            } catch (error) {
+                                console.error(`Erro ao notificar desbloqueio do vinho ${currentWine.name}:`, error);
+                            }
                         }
                     }
                 }
