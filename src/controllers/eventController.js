@@ -260,11 +260,11 @@ export const editEvent = async (req, res) => {
 };
 
 export const joinEvent = async (req, res) => {
-    const { inviteCode } = req.params;
+    const { id } = req.params;
     const { userId, userName } = req.body;
 
     try {
-        const snapshot = await db.collection("events").where("inviteCode", "==", inviteCode).limit(1).get();
+        const snapshot = await db.collection("events").doc(id).limit(1).get();
 
         if (snapshot.empty) {
             return res.status(404).json({ error: "Evento não encontrado ou código inválido" });
@@ -278,7 +278,7 @@ export const joinEvent = async (req, res) => {
             res.status(200).json({
                 message: "Participante adicionado com sucesso",
                 eventId: eventDoc.id,
-                inviteLink: `https://app.enolink.com/join?code=${inviteCode}`,
+                //inviteLink: `https://app.enolink.com/join?code=${inviteCode}`,
             });
         }
 
