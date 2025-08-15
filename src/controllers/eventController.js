@@ -260,11 +260,11 @@ export const editEvent = async (req, res) => {
 };
 
 export const joinEvent = async (req, res) => {
-    const { id } = req.params;
+    const { eventId } = req.params;
     const { userId, userName } = req.body;
 
     // Validação do ID
-    if (!id || typeof id !== "string" || id.trim() === "") {
+    if (!eventId || typeof eventId !== "string" || eventId.trim() === "") {
         return res.status(400).json({
             error: "ID do evento inválido",
             details: "O código do evento deve ser uma string não vazia",
@@ -273,7 +273,7 @@ export const joinEvent = async (req, res) => {
 
     try {
         // Correção: doc() já retorna uma referência direta ao documento
-        const eventRef = db.collection("events").doc(id);
+        const eventRef = db.collection("events").doc(eventId);
         const eventDoc = await eventRef.get();
 
         if (!eventDoc.exists) {
