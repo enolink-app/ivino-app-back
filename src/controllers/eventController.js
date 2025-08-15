@@ -263,22 +263,34 @@ export const joinEvent = async (req, res) => {
     const { id } = req.params;
     const { userId, userName } = req.body;
 
-    try {
-        const snapshot = await db.collection("events").doc(id).limit(1).get();
+    // Validação do ID
+    if (!id || typeof id !== "string" || id.trim() === "") {
+        return res.status(400).json({
+            error: "ID do evento inválido",
+            details: "O código do evento deve ser uma string não vazia",
+        });
+    }
 
-        if (snapshot.empty) {
-            return res.status(404).json({ error: "Evento não encontrado ou código inválido" });
+    try {
+        // Correção: doc() já retorna uma referência direta ao documento
+        const eventRef = db.collection("events").doc(id);
+        const eventDoc = await eventRef.get();
+
+        if (!eventDoc.exists) {
+            return res.status(404).json({
+                error: "Evento não encontrado",
+                details: "Nenhum evento encontrado com o código fornecido",
+            });
         }
 
-        const eventDoc = snapshot.docs[0];
         const eventData = eventDoc.data();
 
-        const isParticipant = eventData.participants.some((p) => p.id === userId);
+        // Verifica se o usuário já é participante
+        const isParticipant = eventData.participants?.some((p) => p.id === userId) || false;
         if (isParticipant) {
-            res.status(200).json({
-                message: "Participante adicionado com sucesso",
+            return res.status(200).json({
+                message: "Você já é participante deste evento",
                 eventId: eventDoc.id,
-                //inviteLink: `https://app.enolink.com/join?code=${inviteCode}`,
             });
         }
 
@@ -289,18 +301,21 @@ export const joinEvent = async (req, res) => {
             isGuest: false,
         };
 
-        await eventDoc.ref.update({
-            participants: [...eventData.participants, newParticipant],
+        // Atualiza o documento
+        await eventRef.update({
+            participants: [...(eventData.participants || []), newParticipant],
             updatedAt: new Date(),
         });
+
         await notifyNewParticipant(eventDoc.id, userName);
-        res.status(200).json({
+
+        return res.status(200).json({
             message: "Participante adicionado com sucesso",
             eventId: eventDoc.id,
         });
     } catch (error) {
         console.error("Erro ao entrar no evento:", error);
-        res.status(500).json({
+        return res.status(500).json({
             error: "Erro ao entrar no evento",
             details: error.message,
         });
