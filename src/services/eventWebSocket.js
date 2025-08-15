@@ -1,4 +1,4 @@
-import { db } from "../models/firebase.js";
+import db from "../models/firebase.js";
 import { notifyWineUnlocked } from "../controllers/notificationController.js";
 
 export const setupEventListeners = () => {

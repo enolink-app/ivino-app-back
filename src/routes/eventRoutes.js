@@ -19,10 +19,15 @@ router.post("/events/:id/evaluate", verifiToken, evaluateWine);
 router.get("/events", verifiToken, listEvents);
 router.get("/events/:id", verifiToken, getEventById);
 router.get("/events/:id/user", verifiToken, getEventByUser);
-router.post("/events/join/:code", verifiToken, joinEvent);
+router.post("/events/join/:eventId", joinEvent);
 router.delete("/events/:eventId/leave/:userId", verifiToken, leaveEvent);
 router.post("/events/:eventId/generate-code", verifiToken, generateNewInviteCode);
 router.get("/events/top/wines", verifiToken, getTopWines);
 router.post("/events/:id/close", verifiToken, closeEvent);
 router.put("/events", verifiToken);
+
+//PUBLICS
+router.get("/events", listEvents);
+router.get("/events/:id", getEventById);
+
 export default router;
