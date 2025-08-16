@@ -2,7 +2,7 @@ import db from "../models/firebase.js";
 
 export async function createWine(req, res) {
     const uid = req.user.uid;
-    const { name, harvest, country, type, description, image, createdAt, updatedAt } = req.body;
+    const { name, harvest, country, grape, description, image, abv, createdAt, updatedAt } = req.body;
     if (!name || !harvest || !country) {
         return res.status(400).json({ erro: "Campos obrigatórios ausentes" });
     }
@@ -12,8 +12,8 @@ export async function createWine(req, res) {
             name,
             harvest,
             country,
-            type,
-
+            grape,
+            abv,
             description: description || "",
             image,
             createdBy: uid,
@@ -48,7 +48,7 @@ export async function getUserWines(req, res) {
 export async function updateWine(req, res) {
     const uid = req.user.uid;
     const wineId = req.params.id;
-    const { name, harvest, country, type, description, image, createdAt, updatedAt } = req.body;
+    const { name, harvest, country, grape, description, image, createdAt, updatedAt } = req.body;
 
     try {
         const wineRef = db.collection("wines").doc(wineId);
@@ -66,7 +66,7 @@ export async function updateWine(req, res) {
         if (name) updates.name = name;
         if (harvest) updates.harvest = harvest;
         if (country) updates.country = country;
-        if (type) updates.type = type;
+        if (grape) updates.grape = grape;
         if (description !== undefined) updates.description = description;
 
         await wineRef.update(updates);
