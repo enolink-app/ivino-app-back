@@ -93,19 +93,30 @@ export const evaluateWine = async (req, res) => {
     }
 
     try {
-        // Primeiro calculamos tudo fora da transação
+        // Validação e formatação dos valores de avaliação
         const newEvaluation = {
             wineId: String(wineId),
             userId: String(userId),
-            aroma: Math.min(5, Math.max(1, Number(aroma))),
-            color: Math.min(5, Math.max(1, Number(color))),
-            flavor: Math.min(5, Math.max(1, Number(flavor))),
+            aroma: Math.min(5, Math.max(0.5, parseFloat(Number(aroma).toFixed(1)))), // Permite meias estrelas (0.5 a 5)
+            color: Math.min(5, Math.max(0.5, parseFloat(Number(color).toFixed(1)))),
+            flavor: Math.min(5, Math.max(0.5, parseFloat(Number(flavor).toFixed(1)))),
             notes: String(notes || ""),
             createdAt: new Date().toISOString(),
         };
 
-        // CORREÇÃO: AQUI CALCULAMOS A SOMA TOTAL DAS NOTAS, NÃO A MÉDIA.
-        const rating = newEvaluation.aroma + newEvaluation.color + newEvaluation.flavor;
+        // Cálculo da média com arredondamento para 2 casas decimais
+        const rating = parseFloat(((newEvaluation.aroma + newEvaluation.color + newEvaluation.flavor) / 3).toFixed(2));
+
+        // Verificação adicional para garantir que a média não ultrapasse 5
+        const finalRating = Math.min(5, rating);
+
+        console.log("Avaliação calculada:", {
+            aroma: newEvaluation.aroma,
+            color: newEvaluation.color,
+            flavor: newEvaluation.flavor,
+            soma: newEvaluation.aroma + newEvaluation.color + newEvaluation.flavor,
+            media: finalRating,
+        });
 
         // Agora fazemos a transação corretamente
         await db.runTransaction(async (transaction) => {
@@ -158,27 +169,30 @@ export const evaluateWine = async (req, res) => {
                 { merge: true }
             );
 
-            // Atualiza ranking
+            // Atualiza ranking - CORREÇÃO DO CÁLCULO
             if (isUpdate) {
                 if (rankingDoc.exists) {
+                    const rankingData = rankingDoc.data();
                     const oldEvaluation = wineEvaluations[userEvaluationIndex];
-                    // CORREÇÃO: O oldRating também deve ser a soma, não a média.
-                    const oldRating = oldEvaluation.aroma + oldEvaluation.color + oldEvaluation.flavor;
-                    const ratingDiff = rating - oldRating;
+
+                    // Calcula a avaliação antiga corretamente
+                    const oldRating = parseFloat(((oldEvaluation.aroma + oldEvaluation.color + oldEvaluation.flavor) / 3).toFixed(2));
+
+                    // Calcula a diferença para ajustar o totalRating
+                    const ratingDiff = finalRating - oldRating;
 
                     transaction.update(rankingRef, {
                         totalRating: admin.firestore.FieldValue.increment(ratingDiff),
                         lastUpdated: new Date().toISOString(),
                     });
                 } else {
-                    // Caso o ranking não exista, cria-o
                     transaction.set(rankingRef, {
                         eventId,
                         wineId,
                         name: wines[wineIndex].name,
                         country: wines[wineIndex].country,
                         image: wines[wineIndex].image,
-                        totalRating: rating,
+                        totalRating: finalRating,
                         totalEvaluations: 1,
                         lastUpdated: new Date().toISOString(),
                     });
@@ -186,19 +200,18 @@ export const evaluateWine = async (req, res) => {
             } else {
                 if (rankingDoc.exists) {
                     transaction.update(rankingRef, {
-                        totalRating: admin.firestore.FieldValue.increment(rating),
+                        totalRating: admin.firestore.FieldValue.increment(finalRating),
                         totalEvaluations: admin.firestore.FieldValue.increment(1),
                         lastUpdated: new Date().toISOString(),
                     });
                 } else {
-                    // Caso o ranking não exista, cria-o
                     transaction.set(rankingRef, {
                         eventId,
                         wineId,
                         name: wines[wineIndex].name,
                         country: wines[wineIndex].country,
                         image: wines[wineIndex].image,
-                        totalRating: rating,
+                        totalRating: finalRating,
                         totalEvaluations: 1,
                         lastUpdated: new Date().toISOString(),
                     });
@@ -210,8 +223,7 @@ export const evaluateWine = async (req, res) => {
             success: true,
             message: "Avaliação registrada com sucesso",
             wineId,
-            // AQUI VOCÊ PODE RETORNAR A NOTA DA AVALIAÇÃO INDIVIDUAL SE QUISER
-            rating: parseFloat((rating / 3).toFixed(2)),
+            rating: finalRating,
         });
     } catch (error) {
         console.error("Erro ao avaliar vinho:", error);
