@@ -103,7 +103,9 @@ export const evaluateWine = async (req, res) => {
             notes: String(notes || ""),
             createdAt: new Date().toISOString(),
         };
-        const rating = (newEvaluation.aroma + newEvaluation.color + newEvaluation.flavor) / 3;
+
+        // CORREÇÃO: AQUI CALCULAMOS A SOMA TOTAL DAS NOTAS, NÃO A MÉDIA.
+        const rating = newEvaluation.aroma + newEvaluation.color + newEvaluation.flavor;
 
         // Agora fazemos a transação corretamente
         await db.runTransaction(async (transaction) => {
@@ -160,7 +162,8 @@ export const evaluateWine = async (req, res) => {
             if (isUpdate) {
                 if (rankingDoc.exists) {
                     const oldEvaluation = wineEvaluations[userEvaluationIndex];
-                    const oldRating = (oldEvaluation.aroma + oldEvaluation.color + oldEvaluation.flavor) / 3;
+                    // CORREÇÃO: O oldRating também deve ser a soma, não a média.
+                    const oldRating = oldEvaluation.aroma + oldEvaluation.color + oldEvaluation.flavor;
                     const ratingDiff = rating - oldRating;
 
                     transaction.update(rankingRef, {
@@ -168,6 +171,7 @@ export const evaluateWine = async (req, res) => {
                         lastUpdated: new Date().toISOString(),
                     });
                 } else {
+                    // Caso o ranking não exista, cria-o
                     transaction.set(rankingRef, {
                         eventId,
                         wineId,
@@ -187,6 +191,7 @@ export const evaluateWine = async (req, res) => {
                         lastUpdated: new Date().toISOString(),
                     });
                 } else {
+                    // Caso o ranking não exista, cria-o
                     transaction.set(rankingRef, {
                         eventId,
                         wineId,
@@ -205,7 +210,8 @@ export const evaluateWine = async (req, res) => {
             success: true,
             message: "Avaliação registrada com sucesso",
             wineId,
-            rating: parseFloat(rating.toFixed(2)),
+            // AQUI VOCÊ PODE RETORNAR A NOTA DA AVALIAÇÃO INDIVIDUAL SE QUISER
+            rating: parseFloat((rating / 3).toFixed(2)),
         });
     } catch (error) {
         console.error("Erro ao avaliar vinho:", error);
