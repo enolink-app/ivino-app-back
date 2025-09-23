@@ -82,3 +82,50 @@ export async function getDiaryEntries(req, res) {
         res.status(500).json({ error: "Error fetching diary", details: error.message });
     }
 }
+
+export const updateDiaryEntry = async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.uid;
+    const { color, aroma, flavor, notes, wineData, wineId } = req.body;
+
+    try {
+        const docRef = db.collection("diaryEntries").doc(id);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            return res.status(404).json({ error: "Entrada não encontrada" });
+        }
+
+        const data = doc.data();
+        if (data.userId !== userId) {
+            return res.status(403).json({ error: "Não autorizado a editar esta entrada" });
+        }
+
+        const newColor = color !== undefined ? Number(color) : data.color;
+        const newAroma = aroma !== undefined ? Number(aroma) : data.aroma;
+        const newFlavor = flavor !== undefined ? Number(flavor) : data.flavor;
+        const newNotes = notes !== undefined ? notes : data.notes;
+        const newWineData = wineData !== undefined ? wineData : data.wineData;
+        const newWineId = wineId !== undefined ? wineId : data.wineId;
+
+        const updated = {
+            ...data,
+            color: newColor,
+            aroma: newAroma,
+            flavor: newFlavor,
+            notes: newNotes,
+            wineData: newWineData,
+            wineId: newWineId,
+            average: (newColor + newAroma + newFlavor) / 3,
+            updatedAt: new Date().toISOString(),
+        };
+
+        await docRef.update(updated);
+
+        const updatedDoc = await docRef.get();
+        res.status(200).json({ id: updatedDoc.id, ...updatedDoc.data() });
+    } catch (error) {
+        console.error("Erro ao atualizar entrada do diário:", error);
+        res.status(500).json({ error: `Erro ao atualizar entrada do diário: ${error.message || error}` });
+    }
+};
