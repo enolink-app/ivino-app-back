@@ -433,7 +433,7 @@ export const getTopWines = async (req, res) => {
         console.error("Erro ao buscar top vinhos:", error);
         return res.status(500).json({
             error: "Erro ao buscar ranking",
-            details: process.env.NODE_ENV === "development" ? error.message : undefined,
+            details: error.message,
         });
     }
 };
