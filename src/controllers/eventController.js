@@ -410,23 +410,27 @@ export const generateNewInviteCode = async (req, res) => {
 
 export const getTopWines = async (req, res) => {
     try {
-        const rankingsSnapshot = await db.collection("wineRankings").where("totalEvaluations", ">", 0).orderBy("totalRating", "desc").limit(10).get();
+        const rankingsSnapshot = await db.collection("wineRankings").where("totalEvaluations", ">", 0).get();
 
         if (rankingsSnapshot.empty) {
             return res.status(200).json([]);
         }
 
-        const topWines = rankingsSnapshot.docs.map((doc) => {
+        const allWines = rankingsSnapshot.docs.map((doc) => {
             const data = doc.data();
+            const averageRating = data.totalEvaluations > 0 ? data.totalRating / data.totalEvaluations : 0;
+
             return {
                 wineId: data.wineId,
                 name: data.name,
                 country: data.country,
                 image: data.image,
-                averageRating: data.totalRating / data.totalEvaluations,
+                averageRating: parseFloat(averageRating.toFixed(2)),
                 totalEvaluations: data.totalEvaluations,
             };
         });
+
+        const topWines = allWines.sort((a, b) => b.averageRating - a.averageRating).slice(0, 10);
 
         return res.status(200).json(topWines);
     } catch (error) {
