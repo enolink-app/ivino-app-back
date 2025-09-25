@@ -19,7 +19,7 @@ export async function createEvent(req, res) {
             dateEnd,
             wines: wines.map((wine) => ({
                 ...wine,
-                isLocked: true, // Todos os vinhos começam bloqueados exceto o primeiro
+                isLocked: true,
             })),
             participants: participants || [],
             status,
@@ -132,7 +132,6 @@ export const evaluateWine = async (req, res) => {
     }
 
     try {
-        // Validação e formatação dos valores de avaliação
         const newEvaluation = {
             wineId: String(wineId),
             userId: String(userId),
@@ -143,10 +142,8 @@ export const evaluateWine = async (req, res) => {
             createdAt: new Date().toISOString(),
         };
 
-        // Cálculo da média com arredondamento para 2 casas decimais
         const rating = parseFloat(((newEvaluation.aroma + newEvaluation.color + newEvaluation.flavor) / 3).toFixed(2));
 
-        // Verificação adicional para garantir que a média não ultrapasse 5
         const finalRating = Math.min(5, rating);
 
         console.log("Avaliação calculada:", {
@@ -157,9 +154,7 @@ export const evaluateWine = async (req, res) => {
             media: finalRating,
         });
 
-        // Agora fazemos a transação corretamente
         await db.runTransaction(async (transaction) => {
-            // 1. FAZER TODAS AS LEITURAS PRIMEIRO
             const eventRef = db.collection("events").doc(eventId);
             const eventDoc = await transaction.get(eventRef);
 
@@ -181,8 +176,6 @@ export const evaluateWine = async (req, res) => {
             const userEvaluationIndex = wineEvaluations.findIndex((ev) => ev.userId === userId);
             const isUpdate = userEvaluationIndex >= 0;
 
-            // 2. AGORA FAZEMOS TODAS AS ESCRITAS
-            // Atualiza avaliações no evento
             if (isUpdate) {
                 wineEvaluations[userEvaluationIndex] = newEvaluation;
             } else {
@@ -208,16 +201,13 @@ export const evaluateWine = async (req, res) => {
                 { merge: true }
             );
 
-            // Atualiza ranking - CORREÇÃO DO CÁLCULO
             if (isUpdate) {
                 if (rankingDoc.exists) {
                     const rankingData = rankingDoc.data();
                     const oldEvaluation = wineEvaluations[userEvaluationIndex];
 
-                    // Calcula a avaliação antiga corretamente
                     const oldRating = parseFloat(((oldEvaluation.aroma + oldEvaluation.color + oldEvaluation.flavor) / 3).toFixed(2));
 
-                    // Calcula a diferença para ajustar o totalRating
                     const ratingDiff = finalRating - oldRating;
 
                     transaction.update(rankingRef, {
@@ -310,7 +300,6 @@ export const joinEvent = async (req, res) => {
     const { eventId } = req.params;
     const { userId, userName } = req.body;
 
-    // Validação do ID
     if (!eventId || typeof eventId !== "string" || eventId.trim() === "") {
         return res.status(400).json({
             error: "ID do evento inválido",
@@ -319,7 +308,6 @@ export const joinEvent = async (req, res) => {
     }
 
     try {
-        // Correção: doc() já retorna uma referência direta ao documento
         const eventRef = db.collection("events").doc(eventId);
         const eventDoc = await eventRef.get();
 
