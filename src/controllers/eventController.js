@@ -37,9 +37,17 @@ export async function createEvent(req, res) {
 
 export const listEvents = async (req, res) => {
     try {
-        const snapshot = await db.collection("events").orderBy("createdAt", "desc").limit(20).get();
+        const snapshot = await db
+            .collection("events")
+            .select("name", "organizerId", "dateStart", "dateEnd", "status", "inviteCode", "createdAt")
+            .orderBy("createdAt", "desc")
+            .limit(20)
+            .get();
 
-        const events = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const events = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
         res.status(200).json(events);
     } catch (error) {
         res.status(500).json({ error: `Erro ao buscar eventos: ${error}` });
@@ -67,15 +75,46 @@ export const getEventByUser = async (req, res) => {
 
 export const getEventById = async (req, res) => {
     const { id } = req.params;
-    console.log("1", id);
+
     try {
-        console.log("2");
-        const doc = await db.collection("events").doc(id).get();
-        console.log("3");
-        if (!doc.exists) return res.status(404).json({ error: "Evento não encontrado - Linha 70" });
-        console.log("4");
-        res.status(200).json({ id: doc.id, ...doc.data() });
-        console.log("4");
+        const doc = await db
+            .collection("events")
+            .doc(id)
+            .select(
+                "name",
+                "organizerId",
+                "dateStart",
+                "dateEnd",
+                "status",
+                "participants.id",
+                "participants.name",
+                "wines.id",
+                "wines.name",
+                "wines.country",
+                "wines.image",
+                "inviteCode"
+            )
+            .get();
+
+        if (!doc.exists) {
+            return res.status(404).json({ error: "Evento não encontrado" });
+        }
+
+        const eventData = doc.data();
+        const simplifiedEvent = {
+            id: doc.id,
+            ...eventData,
+            wines:
+                eventData.wines?.map((wine) => ({
+                    id: wine.id,
+                    name: wine.name,
+                    country: wine.country,
+                    image: wine.image,
+                    isLocked: wine.isLocked,
+                })) || [],
+        };
+
+        res.status(200).json(simplifiedEvent);
     } catch (error) {
         res.status(500).json({ error: `Erro ao buscar evento: ${error}` });
     }
@@ -396,62 +435,28 @@ export const generateNewInviteCode = async (req, res) => {
 
 export const getTopWines = async (req, res) => {
     try {
-        const eventsSnapshot = await db.collection("events").where("status", "in", ["CLOSED", "COMPLETED"]).get();
+        const rankingsSnapshot = await db.collection("wineRankings").where("totalEvaluations", ">", 0).orderBy("averageRating", "desc").limit(10).get();
 
-        if (eventsSnapshot.empty) {
-            return res.status(200).json([]); // Retorna array vazio se não houver eventos
+        if (rankingsSnapshot.empty) {
+            return res.status(200).json([]);
         }
-        const allWines = {};
 
-        eventsSnapshot.forEach((eventDoc) => {
-            const eventData = eventDoc.data();
-
-            if (!eventData.wines || !Array.isArray(eventData.wines)) return;
-
-            eventData.wines.forEach((wine) => {
-                if (!wine.evaluations || wine.evaluations.length === 0) return;
-
-                const totalEvaluations = wine.evaluations.length;
-
-                const totalScore = wine.evaluations.reduce((sum, evalu) => {
-                    return sum + (evalu.aroma + evalu.color + evalu.flavor) / 3;
-                }, 0);
-
-                const averageRating = totalScore / totalEvaluations;
-
-                if (!allWines[wine.id]) {
-                    allWines[wine.id] = {
-                        wineId: wine.id,
-                        name: wine.name || "Vinho Desconhecido",
-                        country: wine.country || "País Desconhecido",
-                        image: wine.image || null,
-                        description: wine.description || "",
-                        totalEvaluations: 0,
-                        totalScore: 0,
-                        eventsCount: 0,
-                    };
-                }
-
-                allWines[wine.id].totalEvaluations += totalEvaluations;
-                allWines[wine.id].totalScore += totalScore;
-                allWines[wine.id].eventsCount += 1;
-            });
+        const topWines = rankingsSnapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
+                wineId: data.wineId,
+                name: data.name,
+                country: data.country,
+                image: data.image,
+                averageRating: data.averageRating,
+                totalEvaluations: data.totalEvaluations,
+                eventsCount: data.eventsCount || 1,
+            };
         });
-
-        // Converte para array e calcula médias finais
-        const winesArray = Object.values(allWines)
-            .map((wine) => ({
-                ...wine,
-                averageRating: wine.totalEvaluations > 0 ? wine.totalScore / wine.totalEvaluations : 0,
-            }))
-            .filter((wine) => wine.averageRating > 0); // Filtra vinhos com avaliação válida
-
-        // Ordena e pega top 10
-        const topWines = winesArray.sort((a, b) => b.averageRating - a.averageRating).slice(0, 10);
 
         return res.status(200).json(topWines);
     } catch (error) {
-        console.error("Erro detalhado ao buscar top vinhos:", error);
+        console.error("Erro ao buscar top vinhos:", error);
         return res.status(500).json({
             error: "Erro ao buscar ranking",
             details: process.env.NODE_ENV === "development" ? error.message : undefined,
@@ -459,10 +464,39 @@ export const getTopWines = async (req, res) => {
     }
 };
 
-// eventController.js
+export const listEventsPaginated = async (req, res) => {
+    const { lastDocId, limit = 10 } = req.query;
+
+    try {
+        let query = db.collection("events").select("name", "organizerId", "dateStart", "status", "createdAt").orderBy("createdAt", "desc").limit(parseInt(limit));
+
+        if (lastDocId) {
+            const lastDoc = await db.collection("events").doc(lastDocId).get();
+            if (lastDoc.exists) {
+                query = query.startAfter(lastDoc);
+            }
+        }
+
+        const snapshot = await query.get();
+
+        const events = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+
+        res.status(200).json({
+            events,
+            hasMore: events.length === parseInt(limit),
+            lastDocId: events.length > 0 ? events[events.length - 1].id : null,
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Erro ao buscar eventos: ${error}` });
+    }
+};
+
 export const closeEvent = async (req, res) => {
     const { id: eventId } = req.params;
-    const { userId } = req.body; // ID do usuário que está tentando encerrar
+    const { userId } = req.body;
 
     try {
         const eventRef = db.collection("events").doc(eventId);
@@ -474,23 +508,19 @@ export const closeEvent = async (req, res) => {
 
         const eventData = eventDoc.data();
 
-        // Verifica se o usuário é o organizador
         if (eventData.organizerId !== userId) {
             return res.status(403).json({ error: "Apenas o organizador pode encerrar o evento" });
         }
 
-        // Verifica se o evento já está encerrado
         if (eventData.status === "CLOSED") {
             return res.status(400).json({ error: "O evento já está encerrado" });
         }
 
-        // Atualiza o status do evento
         await eventRef.update({
             status: "CLOSED",
             closedAt: new Date().toISOString(),
         });
 
-        // Opcional: Processar rankings finais
         await generateFinalRankings(eventId);
 
         return res.status(200).json({
@@ -506,7 +536,6 @@ export const closeEvent = async (req, res) => {
     }
 };
 
-// Função auxiliar para gerar rankings finais (opcional)
 const generateFinalRankings = async (eventId) => {
     const rankingsRef = db.collection("wineRankings").where("eventId", "==", eventId);
     const snapshot = await rankingsRef.get();
