@@ -39,9 +39,9 @@ export const listEvents = async (req, res) => {
     try {
         const snapshot = await db
             .collection("events")
-            .select("name", "organizerId", "dateStart", "dateEnd", "status", "inviteCode", "createdAt")
             .orderBy("createdAt", "desc")
             .limit(20)
+            .select("name", "organizerId", "dateStart", "dateEnd", "status", "inviteCode", "createdAt") // ← APENAS CAMPOS NECESSÁRIOS
             .get();
 
         const events = snapshot.docs.map((doc) => ({
@@ -53,7 +53,6 @@ export const listEvents = async (req, res) => {
         res.status(500).json({ error: `Erro ao buscar eventos: ${error}` });
     }
 };
-
 export const getEventByUser = async (req, res) => {
     const { id } = req.params;
     const uid = req.user.uid;
@@ -80,20 +79,7 @@ export const getEventById = async (req, res) => {
         const doc = await db
             .collection("events")
             .doc(id)
-            .select(
-                "name",
-                "organizerId",
-                "dateStart",
-                "dateEnd",
-                "status",
-                "participants.id",
-                "participants.name",
-                "wines.id",
-                "wines.name",
-                "wines.country",
-                "wines.image",
-                "inviteCode"
-            )
+            .select("name", "organizerId", "dateStart", "dateEnd", "wines.name", "wines.country", "wines.image", "participants", "status", "inviteCode")
             .get();
 
         if (!doc.exists) {
@@ -101,7 +87,8 @@ export const getEventById = async (req, res) => {
         }
 
         const eventData = doc.data();
-        const simplifiedEvent = {
+
+        const lightweightEvent = {
             id: doc.id,
             ...eventData,
             wines:
@@ -114,7 +101,7 @@ export const getEventById = async (req, res) => {
                 })) || [],
         };
 
-        res.status(200).json(simplifiedEvent);
+        res.status(200).json(lightweightEvent);
     } catch (error) {
         res.status(500).json({ error: `Erro ao buscar evento: ${error}` });
     }
@@ -423,7 +410,7 @@ export const generateNewInviteCode = async (req, res) => {
 
 export const getTopWines = async (req, res) => {
     try {
-        const rankingsSnapshot = await db.collection("wineRankings").where("totalEvaluations", ">", 0).orderBy("averageRating", "desc").limit(10).get();
+        const rankingsSnapshot = await db.collection("wineRankings").where("totalEvaluations", ">", 0).orderBy("totalRating", "desc").limit(10).get();
 
         if (rankingsSnapshot.empty) {
             return res.status(200).json([]);
@@ -436,9 +423,8 @@ export const getTopWines = async (req, res) => {
                 name: data.name,
                 country: data.country,
                 image: data.image,
-                averageRating: data.averageRating,
+                averageRating: data.totalRating / data.totalEvaluations,
                 totalEvaluations: data.totalEvaluations,
-                eventsCount: data.eventsCount || 1,
             };
         });
 
