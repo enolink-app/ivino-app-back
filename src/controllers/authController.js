@@ -170,7 +170,7 @@ export async function googleOAuthRedirect(req, res) {
 }
 
 export async function exchangeGoogleCode(req, res) {
-    const { code, code_verifier } = req.body;
+    const { code, code_verifier, redirect_uri } = req.body;
 
     console.log("🔄 Iniciando exchange do código Google:", code ? `${code.substring(0, 20)}...` : "null");
 
@@ -195,7 +195,7 @@ export async function exchangeGoogleCode(req, res) {
                 code: code,
                 client_id: "27430021409-n25b5e2urcnv1m0sot5stg8m81muo386.apps.googleusercontent.com",
                 client_secret: "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",
-                redirect_uri: "https://ivino-api.com/api/oauth-redirect",
+                redirect_uri: redirect_uri,
                 grant_type: "authorization_code",
                 code_verifier: code_verifier,
             }).toString(),
