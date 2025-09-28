@@ -65,124 +65,97 @@ export async function googleOAuthRedirect(req, res) {
     const { code, state, error, error_description } = req.query;
 
     console.log("📨 Recebendo callback do Google:", {
-        code: code ? `${code.substring(0, 20)}...` : null,
+        code: code ? code.substring(0, 20) + "..." : null,
         state,
         error,
-        error_description,
     });
 
     try {
         if (error) {
             console.error("❌ Erro no OAuth do Google:", error, error_description);
-            const errorParams = new URLSearchParams({
-                error: error,
-                state: state || "",
-                ...(error_description && { error_description }),
-            }).toString();
-
-            return res.redirect(`com.vivavinho.enolink://oauthredirect?${errorParams}`);
+            const redirectUrl = `com.vivavinho.enolink://oauthredirect?error=${encodeURIComponent(error)}&state=${state || ""}`;
+            return res.redirect(redirectUrl);
         }
 
         if (!code) {
             console.error("❌ Código de autorização não recebido");
-            return res.redirect(`com.vivavinho.enolink://oauthredirect?error=missing_code&state=${state || ""}`);
+            const redirectUrl = `com.vivavinho.enolink://oauthredirect?error=missing_code&state=${state || ""}`;
+            return res.redirect(redirectUrl);
         }
 
-        const params = new URLSearchParams({
-            code: code,
-            state: state || "",
-            source: "google_oauth",
-        }).toString();
+        const redirectUrl = `com.vivavinho.enolink://oauthredirect?code=${encodeURIComponent(code)}&state=${state || ""}`;
 
-        const redirectUrl = `com.vivavinho.enolink://oauthredirect?${params}`;
-
-        console.log("🔀 Redirecionando para app (primeiros 50 chars):", redirectUrl.substring(0, 50) + "...");
+        console.log("🔀 Redirecionando para app:", redirectUrl);
 
         res.send(`
             <!DOCTYPE html>
             <html>
             <head>
                 <title>Redirecionando para Vivavinho...</title>
-                <meta charset="UTF-8">
+                <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <script>
-                    console.log("Iniciando redirecionamento OAuth...");
-                    
-                    function redirectToApp() {
-                        const appUrl = '${redirectUrl}';
-                        console.log("Redirecionando para:", appUrl);
-                        
-                        window.location.href = appUrl;
-                        
-                        setTimeout(function() {
-                            console.log("Fallback: mostrando link manual");
-                            document.getElementById('manual-link').style.display = 'block';
-                            document.getElementById('status').innerHTML = 'Se o redirecionamento automático não funcionar, clique no link abaixo:';
-                        }, 1500);
-                    }
-                    
-                    window.onload = redirectToApp;
-                </script>
                 <style>
                     body {
-                        font-family: Arial, sans-serif;
-                        text-align: center;
-                        padding: 50px 20px;
-                        background: linear-gradient(135deg, #7E22CE 0%, #3B82F6 100%);
-                        color: white;
-                        min-height: 100vh;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        background: linear-gradient(135deg, #7E22CE 0%, #3B0764 100%);
+                        margin: 0;
+                        padding: 0;
                         display: flex;
-                        flex-direction: column;
                         justify-content: center;
                         align-items: center;
+                        min-height: 100vh;
+                        color: white;
                     }
                     .container {
-                        background: rgba(255, 255, 255, 0.1);
-                        backdrop-filter: blur(10px);
-                        padding: 40px 30px;
-                        border-radius: 20px;
-                        max-width: 500px;
-                        width: 100%;
-                    }
-                    h2 {
-                        margin-bottom: 20px;
-                        font-size: 24px;
+                        text-align: center;
+                        padding: 40px 20px;
+                        max-width: 400px;
                     }
                     .spinner {
-                        border: 4px solid rgba(255, 255, 255, 0.3);
+                        border: 4px solid rgba(255,255,255,0.3);
                         border-radius: 50%;
                         border-top: 4px solid white;
                         width: 40px;
                         height: 40px;
                         animation: spin 1s linear infinite;
-                        margin: 20px auto;
+                        margin: 0 auto 20px;
                     }
                     @keyframes spin {
                         0% { transform: rotate(0deg); }
                         100% { transform: rotate(360deg); }
                     }
-                    #manual-link {
+                    .manual-link {
                         display: none;
+                        margin-top: 20px;
                         padding: 12px 24px;
                         background: white;
                         color: #7E22CE;
                         text-decoration: none;
-                        border-radius: 10px;
-                        font-weight: bold;
-                        margin-top: 20px;
+                        border-radius: 25px;
+                        font-weight: 600;
                         transition: transform 0.2s;
                     }
-                    #manual-link:hover {
+                    .manual-link:hover {
                         transform: translateY(-2px);
                     }
                 </style>
+                <script>
+                    setTimeout(function() {
+                        window.location.href = '${redirectUrl}';
+                    }, 100);
+                    
+                    setTimeout(function() {
+                        document.getElementById('manual-link').style.display = 'inline-block';
+                        document.getElementById('message').textContent = 'Se o redirecionamento não funcionou, clique no link abaixo:';
+                    }, 3000);
+                </script>
             </head>
             <body>
                 <div class="container">
-                    <h2>🎉 Login realizado com sucesso!</h2>
-                    <p id="status">Redirecionando para o Vivavinho...</p>
                     <div class="spinner"></div>
-                    <a id="manual-link" href="${redirectUrl}">
+                    <h2>Redirecionando para o Vivavinho...</h2>
+                    <p id="message">Aguarde um momento</p>
+                    <a id="manual-link" href="${redirectUrl}" class="manual-link">
                         Abrir no App Vivavinho
                     </a>
                 </div>
@@ -191,11 +164,8 @@ export async function googleOAuthRedirect(req, res) {
         `);
     } catch (error) {
         console.error("💥 Erro no processamento do OAuth:", error);
-        const errorParams = new URLSearchParams({
-            error: "processing_error",
-            message: error.message,
-        }).toString();
-        res.redirect(`com.vivavinho.enolink://oauthredirect?${errorParams}`);
+        const redirectUrl = `com.vivavinho.enolink://oauthredirect?error=server_error&message=${encodeURIComponent(error.message)}`;
+        res.redirect(redirectUrl);
     }
 }
 
