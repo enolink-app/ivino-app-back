@@ -64,7 +64,7 @@ export const sendPasswordRecover = async (req, res) => {
 export async function googleOAuthRedirect(req, res) {
     const { code, state, error, error_description } = req.query;
 
-    console.log("📨 Recebendo callback do Google:", {
+    console.log("📨 Recebendo callback do Google (via Expo Proxy):", {
         code: code ? code.substring(0, 20) + "..." : null,
         state,
         error,
@@ -73,15 +73,16 @@ export async function googleOAuthRedirect(req, res) {
     try {
         if (error) {
             console.error("❌ Erro no OAuth do Google:", error, error_description);
-            const redirectUrl = `com.vivavinho.enolink://oauthredirect?error=${encodeURIComponent(error)}&state=${state || ""}`;
-            return res.redirect(redirectUrl);
+
+            return res.redirect(`com.vivavinho.enolink://oauthredirect?error=${encodeURIComponent(error)}`);
         }
 
         if (!code) {
             console.error("❌ Código de autorização não recebido");
-            const redirectUrl = `com.vivavinho.enolink://oauthredirect?error=missing_code&state=${state || ""}`;
-            return res.redirect(redirectUrl);
+            return res.redirect(`com.vivavinho.enolink://oauthredirect?error=missing_code`);
         }
+
+        console.log("✅ Código recebido com sucesso via Expo Proxy");
 
         const redirectUrl = `com.vivavinho.enolink://oauthredirect?code=${encodeURIComponent(code)}&state=${state || ""}`;
 
@@ -92,80 +93,18 @@ export async function googleOAuthRedirect(req, res) {
             <html>
             <head>
                 <title>Redirecionando para Vivavinho...</title>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body {
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        background: linear-gradient(135deg, #7E22CE 0%, #3B0764 100%);
-                        margin: 0;
-                        padding: 0;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        min-height: 100vh;
-                        color: white;
-                    }
-                    .container {
-                        text-align: center;
-                        padding: 40px 20px;
-                        max-width: 400px;
-                    }
-                    .spinner {
-                        border: 4px solid rgba(255,255,255,0.3);
-                        border-radius: 50%;
-                        border-top: 4px solid white;
-                        width: 40px;
-                        height: 40px;
-                        animation: spin 1s linear infinite;
-                        margin: 0 auto 20px;
-                    }
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                    .manual-link {
-                        display: none;
-                        margin-top: 20px;
-                        padding: 12px 24px;
-                        background: white;
-                        color: #7E22CE;
-                        text-decoration: none;
-                        border-radius: 25px;
-                        font-weight: 600;
-                        transition: transform 0.2s;
-                    }
-                    .manual-link:hover {
-                        transform: translateY(-2px);
-                    }
-                </style>
                 <script>
-                    setTimeout(function() {
-                        window.location.href = '${redirectUrl}';
-                    }, 100);
-                    
-                    setTimeout(function() {
-                        document.getElementById('manual-link').style.display = 'inline-block';
-                        document.getElementById('message').textContent = 'Se o redirecionamento não funcionou, clique no link abaixo:';
-                    }, 3000);
+                    window.location.href = '${redirectUrl}';
                 </script>
             </head>
             <body>
-                <div class="container">
-                    <div class="spinner"></div>
-                    <h2>Redirecionando para o Vivavinho...</h2>
-                    <p id="message">Aguarde um momento</p>
-                    <a id="manual-link" href="${redirectUrl}" class="manual-link">
-                        Abrir no App Vivavinho
-                    </a>
-                </div>
+                <p>Redirecionando para o aplicativo...</p>
             </body>
             </html>
         `);
     } catch (error) {
         console.error("💥 Erro no processamento do OAuth:", error);
-        const redirectUrl = `com.vivavinho.enolink://oauthredirect?error=server_error&message=${encodeURIComponent(error.message)}`;
-        res.redirect(redirectUrl);
+        res.redirect(`com.vivavinho.enolink://oauthredirect?error=server_error`);
     }
 }
 
