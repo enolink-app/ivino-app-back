@@ -170,13 +170,20 @@ export async function googleOAuthRedirect(req, res) {
 }
 
 export async function exchangeGoogleCode(req, res) {
-    const { code } = req.body;
+    const { code, code_verifier } = req.body;
 
     console.log("🔄 Iniciando exchange do código Google:", code ? `${code.substring(0, 20)}...` : "null");
 
     try {
         if (!code) {
             return res.status(400).json({ error: "Código é obrigatório" });
+        }
+
+        if (!code_verifier) {
+            return res.status(400).json({
+                error: "Falha na troca de token",
+                details: { error: "invalid_grant", error_description: "Missing code verifier." },
+            });
         }
 
         const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -190,6 +197,7 @@ export async function exchangeGoogleCode(req, res) {
                 client_secret: "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",
                 redirect_uri: "https://ivino-api.com/api/oauth-redirect",
                 grant_type: "authorization_code",
+                code_verifier: code_verifier,
             }).toString(),
         });
 
