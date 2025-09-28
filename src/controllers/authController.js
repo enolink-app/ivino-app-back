@@ -216,9 +216,9 @@ export async function exchangeGoogleCode(req, res) {
             },
             body: new URLSearchParams({
                 code: code,
-                client_id: process.env.GOOGLE_CLIENT_ID || "27430021409-n25b5e2urcnv1m0sot5stg8m81muo386.apps.googleusercontent.com",
-                client_secret: process.env.GOOGLE_CLIENT_SECRET || "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",
-                redirect_uri: process.env.GOOGLE_REDIRECT_URI || "https://ivino-api.com/oauth-redirect",
+                client_id: "27430021409-n25b5e2urcnv1m0sot5stg8m81muo386.apps.googleusercontent.com",
+                client_secret: "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",
+                redirect_uri: "https://ivino-api.com/api/oauth-redirect",
                 grant_type: "authorization_code",
             }).toString(),
         });
