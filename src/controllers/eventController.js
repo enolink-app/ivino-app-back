@@ -42,7 +42,7 @@ export const listEvents = async (req, res) => {
             .collection("events")
             .orderBy("createdAt", "desc")
             .limit(20)
-            .select("name", "organizerId", "dateStart", "dateEnd", "status", "inviteCode", "createdAt") // ← APENAS CAMPOS NECESSÁRIOS
+            .select("name", "organizerId", "dateStart", "dateEnd", "status", "inviteCode", "createdAt", "coverImage") // ← APENAS CAMPOS NECESSÁRIOS
             .get();
 
         const events = snapshot.docs.map((doc) => ({
