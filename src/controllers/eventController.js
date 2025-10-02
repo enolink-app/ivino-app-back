@@ -3,7 +3,7 @@ import generateInviteCode from "../functions/generateInviteCode.js";
 import admin from "firebase-admin";
 import { notifyNewParticipant, notifyWineUnlocked } from "./notificationController.js";
 export async function createEvent(req, res) {
-    const { name, organizerId, dateStart, dateEnd, wines, participants, status } = req.body;
+    const { name, organizerId, dateStart, dateEnd, wines, participants, status, coverImage } = req.body;
 
     if (!name || !organizerId || !dateStart || !wines) {
         return res.status(400).json({ erro: "Campos obrigatórios ausentes" });
@@ -17,6 +17,7 @@ export async function createEvent(req, res) {
             organizerId,
             dateStart,
             dateEnd,
+            coverImage,
             wines: wines.map((wine) => ({
                 ...wine,
                 isLocked: true,
