@@ -77,11 +77,7 @@ export const getEventById = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const doc = await db
-            .collection("events")
-            .doc(id)
-            .select("name", "organizerId", "dateStart", "dateEnd", "wines.name", "wines.country", "wines.image", "participants", "status", "inviteCode")
-            .get();
+        const doc = await db.collection("events").doc(id).get();
 
         if (!doc.exists) {
             return res.status(404).json({ error: "Evento não encontrado" });
@@ -89,9 +85,18 @@ export const getEventById = async (req, res) => {
 
         const eventData = doc.data();
 
-        const lightweightEvent = {
+        const minimalEvent = {
             id: doc.id,
-            ...eventData,
+            name: eventData.name,
+            organizerId: eventData.organizerId,
+            dateStart: eventData.dateStart,
+            status: eventData.status,
+            inviteCode: eventData.inviteCode,
+            participants:
+                eventData.participants?.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                })) || [],
             wines:
                 eventData.wines?.map((wine) => ({
                     id: wine.id,
@@ -102,9 +107,10 @@ export const getEventById = async (req, res) => {
                 })) || [],
         };
 
-        res.status(200).json(lightweightEvent);
+        res.status(200).json(minimalEvent);
     } catch (error) {
-        res.status(500).json({ error: `Erro ao buscar evento: ${error}` });
+        console.error("Erro ao buscar evento:", error);
+        res.status(500).json({ error: `Erro ao buscar evento: ${error.message}` });
     }
 };
 
